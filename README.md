@@ -53,8 +53,8 @@ Powered by Google's low-latency **Gemini Flash-Lite** models. Translations strea
 
 1.  **Clone the repository**
     ```bash
-    git clone https://github.com/doniyor117/lumenai_translate.git
-    cd lumenai_translate
+    git clone https://github.com/doniyor117/lingomate.git
+    cd lingomate
     ```
 
 2.  **Install dependencies**
