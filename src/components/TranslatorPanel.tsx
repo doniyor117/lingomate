@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Draft, writeDraft } from '@/lib/draft';
 import { TranslationEntry, TranslationMode } from '@/lib/types';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useSpeech } from '@/hooks/useSpeech';
@@ -14,6 +15,8 @@ import { useCanSpeak } from '@/lib/voices';
 interface TranslatorPanelProps {
     /** Entry restored from history; the parent remounts the panel (via key) when it changes. */
     initialEntry: TranslationEntry | null;
+    /** Unsent input restored after a reload. */
+    initialDraft?: Draft | null;
     mode: TranslationMode;
     onModeChange: (mode: TranslationMode) => void;
     model: string;
@@ -25,6 +28,7 @@ interface TranslatorPanelProps {
 
 export function TranslatorPanel({
     initialEntry,
+    initialDraft,
     mode,
     onModeChange,
     model,
@@ -33,13 +37,14 @@ export function TranslatorPanel({
     onSourceLangChange,
     onTargetLangChange
 }: TranslatorPanelProps) {
-    const [context, setContext] = useState(initialEntry?.context ?? '');
-    const [showContext, setShowContext] = useState(!!initialEntry?.context);
+    const [context, setContext] = useState(initialDraft?.context ?? initialEntry?.context ?? '');
+    const [showContext, setShowContext] = useState(!!(initialDraft?.context ?? initialEntry?.context));
 
     const {
         sourceText,
         setSourceText,
         result,
+        entryId,
         isBusy,
         isLoading,
         error,
@@ -54,8 +59,19 @@ export function TranslatorPanel({
         context,
         mode,
         model,
-        initialEntry
+        initialEntry,
+        initialText: initialDraft?.sourceText
     });
+
+    // Save the input as it changes. Skips the unchanged initial state, so mounting
+    // an empty panel never wipes a draft the page is about to restore.
+    const savedDraft = useRef(JSON.stringify([sourceText, context, entryId]));
+    useEffect(() => {
+        const current = JSON.stringify([sourceText, context, entryId]);
+        if (current === savedDraft.current) return;
+        savedDraft.current = current;
+        writeDraft({ sourceText, context, entryId });
+    }, [sourceText, context, entryId]);
 
     const detectedLanguage = getDetectedLanguage(result);
     const canSpeak = useCanSpeak();

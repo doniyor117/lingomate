@@ -14,6 +14,8 @@ interface UseTranslationParams {
     mode: TranslationMode;
     model: string;
     initialEntry?: TranslationEntry | null;
+    /** Text restored from a saved draft; takes precedence over the entry's text. */
+    initialText?: string;
 }
 
 export function useTranslation({
@@ -22,10 +24,13 @@ export function useTranslation({
     context,
     mode,
     model,
-    initialEntry
+    initialEntry,
+    initialText
 }: UseTranslationParams) {
-    const [sourceText, setSourceText] = useState(initialEntry?.sourceText ?? '');
+    const [sourceText, setSourceText] = useState(initialText ?? initialEntry?.sourceText ?? '');
     const [result, setResult] = useState<TranslationResult | null>(() => initialEntry ? entryToResult(initialEntry) : null);
+    // The history entry behind the result on screen, so a reload can bring the result back.
+    const [entryId, setEntryId] = useState<string | undefined>(initialEntry?.id);
     const [isBusy, setIsBusy] = useState(false);
     const [error, setError] = useState('');
     const [fallbackNotice, setFallbackNotice] = useState<FallbackNotice | null>(null);
@@ -58,6 +63,7 @@ export function useTranslation({
         setIsBusy(true);
         setError('');
         setResult(null);
+        setEntryId(undefined);
 
         try {
             const response = await fetch('/api/translate', {
@@ -106,7 +112,7 @@ export function useTranslation({
             }
             setResult(final);
 
-            saveTranslation({
+            const saved = saveTranslation({
                 sourceText: text,
                 ...serializeResult(final),
                 selectedMode: mode,
@@ -114,6 +120,7 @@ export function useTranslation({
                 targetLang,
                 context: trimmedContext,
             });
+            setEntryId(saved.id);
         } catch (err) {
             if (controller.signal.aborted) return;
             // fetch() rejects with a TypeError on network failures; its message is browser-specific.
@@ -130,6 +137,7 @@ export function useTranslation({
 
     const clearResult = useCallback(() => {
         setResult(null);
+        setEntryId(undefined);
         setError('');
     }, []);
 
@@ -140,6 +148,7 @@ export function useTranslation({
         sourceText,
         setSourceText,
         result,
+        entryId,
         isBusy,
         isLoading,
         error,

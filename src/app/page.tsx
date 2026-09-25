@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 import { TranslatorPanel } from '@/components/TranslatorPanel';
 import { HistorySidebar } from '@/components/HistorySidebar';
 import { SettingsModal } from '@/components/SettingsModal';
-import { TranslationEntry } from '@/lib/history';
+import { TranslationEntry, findHistoryEntry } from '@/lib/history';
+import { Draft, readDraft } from '@/lib/draft';
 import { usePreferences } from '@/hooks/usePreferences';
 import { promptInstall, useInstallStatus } from '@/lib/install';
 import { useHtmlLang, useI18n } from '@/lib/i18n';
@@ -14,15 +15,31 @@ export default function Home() {
     const [historyOpen, setHistoryOpen] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [restoredEntry, setRestoredEntry] = useState<TranslationEntry | null>(null);
+    const [draft, setDraft] = useState<Draft | null>(null);
+    // Remounts the panel with fresh initial state on every restore.
+    const [panelKey, setPanelKey] = useState(0);
     const prefs = usePreferences();
     const { t, uiLang } = useI18n();
     useHtmlLang(uiLang);
     const installStatus = useInstallStatus();
     const { applySettings, mode: currentMode } = prefs;
 
+    // Brings back what was in the input box (and its result) if the page was reloaded.
+    // Read after mount: storage isn't available during the server render.
+    useEffect(() => {
+        const saved = readDraft();
+        if (!saved) return;
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from storage after hydration
+        setDraft(saved);
+        setRestoredEntry(saved.entryId ? findHistoryEntry(saved.entryId) : null);
+        setPanelKey((k) => k + 1);
+    }, []);
+
     // Restores the entry's result and the exact settings it was made with.
     const handleSelectHistory = useCallback((entry: TranslationEntry) => {
+        setDraft(null);
         setRestoredEntry(entry);
+        setPanelKey((k) => k + 1);
         applySettings({
             mode: entry.selectedMode ?? entry.mode ?? currentMode,
             sourceLang: entry.sourceLang,
@@ -100,8 +117,9 @@ export default function Home() {
             {/* Main Content */}
             <div className="flex-1 p-4 md:p-6 max-w-7xl mx-auto w-full">
                 <TranslatorPanel
-                    key={restoredEntry?.id ?? 'new'}
+                    key={panelKey}
                     initialEntry={restoredEntry}
+                    initialDraft={draft}
                     mode={prefs.mode}
                     onModeChange={prefs.setMode}
                     model={prefs.model}

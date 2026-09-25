@@ -27,6 +27,10 @@ export function useHistory(): TranslationEntry[] {
     return useMemo(() => parseHistory(raw), [raw]);
 }
 
+export function findHistoryEntry(id: string): TranslationEntry | null {
+    return getHistory().find((entry) => entry.id === id) ?? null;
+}
+
 export function saveTranslation(entry: Omit<TranslationEntry, 'id' | 'timestamp'>): TranslationEntry {
     const newEntry: TranslationEntry = {
         ...entry,
