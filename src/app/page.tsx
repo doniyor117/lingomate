@@ -81,9 +81,7 @@ export default function Home() {
                     key={restoredEntry?.id ?? 'new'}
                     initialEntry={restoredEntry}
                     translationMode={prefs.mode}
-                    meaningModel={prefs.meaningModel}
-                    directModel={prefs.directModel}
-                    reverseModel={prefs.reverseModel}
+                    model={prefs.model}
                     sourceLang={prefs.sourceLang}
                     targetLang={prefs.targetLang}
                     onSourceLangChange={prefs.setSourceLang}
@@ -101,13 +99,9 @@ export default function Home() {
             <SettingsModal 
                 isOpen={settingsOpen}
                 onClose={() => setSettingsOpen(false)}
-                meaningModel={prefs.meaningModel}
-                directModel={prefs.directModel}
-                reverseModel={prefs.reverseModel}
+                model={prefs.model}
                 translationMode={prefs.mode}
-                onMeaningModelChange={prefs.setMeaningModel}
-                onDirectModelChange={prefs.setDirectModel}
-                onReverseModelChange={prefs.setReverseModel}
+                onModelChange={prefs.setModel}
                 onModeChange={prefs.setMode}
             />
 

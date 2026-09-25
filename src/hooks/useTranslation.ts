@@ -1,15 +1,15 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { saveTranslation } from '@/lib/history';
 import { OutputMode, TranslationEntry, TranslationMode } from '@/lib/types';
+import { resolveModel } from '@/lib/models';
+import { FallbackNotice, pickModel, recordModelResult } from '@/lib/model-fallback';
 
 interface UseTranslationParams {
     sourceLang: string;
     targetLang: string;
     context: string;
     translationMode: TranslationMode;
-    meaningModel: string;
-    directModel: string;
-    reverseModel: string;
+    model: string;
     initialEntry?: TranslationEntry | null;
 }
 
@@ -18,9 +18,7 @@ export function useTranslation({
     targetLang,
     context,
     translationMode,
-    meaningModel,
-    directModel,
-    reverseModel,
+    model,
     initialEntry
 }: UseTranslationParams) {
     const [sourceText, setSourceText] = useState(initialEntry?.sourceText ?? '');
@@ -28,6 +26,7 @@ export function useTranslation({
     const [isBusy, setIsBusy] = useState(false);
     const [error, setError] = useState('');
     const [outputMode, setOutputMode] = useState<OutputMode>(translationMode);
+    const [fallbackNotice, setFallbackNotice] = useState<FallbackNotice | null>(null);
     const abortRef = useRef<AbortController | null>(null);
 
     const cancelTranslation = useCallback(() => {
@@ -51,6 +50,9 @@ export function useTranslation({
         setTranslatedText('');
         setOutputMode(translationMode);
 
+        const preferred = resolveModel(model);
+        const requested = pickModel(preferred);
+
         try {
             const response = await fetch('/api/translate', {
                 method: 'POST',
@@ -62,13 +64,19 @@ export function useTranslation({
                     targetLang,
                     context: context.trim() || undefined,
                     mode: translationMode,
-                    model: translationMode === 'direct' ? directModel : translationMode === 'reverse' ? reverseModel : meaningModel
+                    model: requested
                 }),
             });
 
             if (!response.ok || !response.body) {
                 const data = await response.json().catch(() => ({}));
                 throw new Error(data.error || 'Translation failed');
+            }
+
+            const used = response.headers.get('X-Model');
+            if (used) {
+                const notice = recordModelResult(preferred, requested, used);
+                if (notice) setFallbackNotice(notice);
             }
 
             const reader = response.body.getReader();
@@ -101,8 +109,10 @@ export function useTranslation({
         }
     }, [
         sourceText, sourceLang, targetLang, context,
-        translationMode, directModel, meaningModel, reverseModel, cancelTranslation
+        translationMode, model, cancelTranslation
     ]);
+
+    const dismissFallbackNotice = useCallback(() => setFallbackNotice(null), []);
 
     // Skeleton until the first chunk lands, then the text streams in.
     const isLoading = isBusy && !translatedText;
@@ -120,6 +130,8 @@ export function useTranslation({
         outputMode,
         setOutputMode,
         handleTranslate,
-        cancelTranslation
+        cancelTranslation,
+        fallbackNotice,
+        dismissFallbackNotice
     };
 }

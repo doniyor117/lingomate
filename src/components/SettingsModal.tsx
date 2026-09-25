@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { MODELS } from '@/lib/models';
+import { AUTO_MODEL, MODELS } from '@/lib/models';
 import { TranslationMode } from '@/lib/types';
 import { ThemeToggle } from './ThemeToggle';
 import { ModelSelect } from './ModelSelect';
@@ -7,26 +7,18 @@ import { ModelSelect } from './ModelSelect';
 interface SettingsModalProps {
     isOpen: boolean;
     onClose: () => void;
-    meaningModel: string;
-    directModel: string;
-    reverseModel: string;
+    model: string;
     translationMode: TranslationMode;
-    onMeaningModelChange: (val: string) => void;
-    onDirectModelChange: (val: string) => void;
-    onReverseModelChange: (val: string) => void;
+    onModelChange: (val: string) => void;
     onModeChange: (mode: TranslationMode) => void;
 }
 
 export function SettingsModal({
     isOpen,
     onClose,
-    meaningModel,
-    directModel,
-    reverseModel,
+    model,
     translationMode,
-    onMeaningModelChange,
-    onDirectModelChange,
-    onReverseModelChange,
+    onModelChange,
     onModeChange,
 }: SettingsModalProps) {
     useEffect(() => {
@@ -42,7 +34,10 @@ export function SettingsModal({
 
     if (!isOpen) return null;
 
-    const modelGroups = [{ label: 'Gemini Flash-Lite', models: MODELS }];
+    const modelOptions = [
+        { id: AUTO_MODEL, displayName: 'Auto (Gemini 3.5 Flash-Lite)' },
+        ...MODELS,
+    ];
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in p-4 sm:p-6">
@@ -110,32 +105,12 @@ export function SettingsModal({
                         <h3 className="text-sm font-medium text-[var(--text-muted)] uppercase tracking-wider">Model Selection</h3>
                         
                         <div className="space-y-1.5 relative z-30">
-                            <label className="text-sm font-medium text-[var(--foreground)] block">Meaning Mode</label>
-                            <p className="text-xs text-[var(--text-muted)] mb-2">Used for deep context, nuances, and multiple definitions.</p>
-                            <ModelSelect 
-                                value={meaningModel} 
-                                onChange={onMeaningModelChange} 
-                                groups={modelGroups} 
-                            />
-                        </div>
-
-                        <div className="space-y-1.5 relative z-20">
-                            <label className="text-sm font-medium text-[var(--foreground)] mt-4 block">Direct Mode</label>
-                            <p className="text-xs text-[var(--text-muted)] mb-2">Used for literal sentence translations.</p>
-                            <ModelSelect 
-                                value={directModel} 
-                                onChange={onDirectModelChange} 
-                                groups={modelGroups} 
-                            />
-                        </div>
-
-                        <div className="space-y-1.5 relative z-10">
-                            <label className="text-sm font-medium text-[var(--foreground)] mt-4 block">Reverse Lookup Mode</label>
-                            <p className="text-xs text-[var(--text-muted)] mb-2">Used for finding words based on a description.</p>
-                            <ModelSelect 
-                                value={reverseModel} 
-                                onChange={onReverseModelChange} 
-                                groups={modelGroups} 
+                            <label className="text-sm font-medium text-[var(--foreground)] block">Model</label>
+                            <p className="text-xs text-[var(--text-muted)] mb-2">Used for all translation modes. If it fails, LumenAI switches to the other model for 15 minutes.</p>
+                            <ModelSelect
+                                value={model}
+                                onChange={onModelChange}
+                                options={modelOptions}
                             />
                         </div>
                     </div>

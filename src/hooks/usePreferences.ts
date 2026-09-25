@@ -9,21 +9,16 @@ const isModel = (v: string) => v === AUTO_MODEL || isKnownModel(v);
 
 export function usePreferences() {
     const [mode, setMode] = useStoredValue<TranslationMode>('lumen_translation_mode', 'meaning', isMode);
-    const [meaningModel, setMeaningModel] = useStoredValue<string>('lumen_meaning_model', AUTO_MODEL, isModel);
-    const [directModel, setDirectModel] = useStoredValue<string>('lumen_direct_model', AUTO_MODEL, isModel);
-    const [reverseModel, setReverseModel] = useStoredValue<string>('lumen_reverse_model', AUTO_MODEL, isModel);
+    // One model for every mode.
+    const [model, setModel] = useStoredValue<string>('lumen_model', AUTO_MODEL, isModel);
     const [sourceLang, setSourceLang] = useStoredValue<string>('lumen_source_lang', 'auto');
     const [targetLang, setTargetLang] = useStoredValue<string>('lumen_target_lang', 'uz');
 
     return {
         mode,
         setMode,
-        meaningModel,
-        setMeaningModel,
-        directModel,
-        setDirectModel,
-        reverseModel,
-        setReverseModel,
+        model,
+        setModel,
         sourceLang,
         setSourceLang,
         targetLang,

@@ -7,14 +7,13 @@ import { useSpeech } from '@/hooks/useSpeech';
 import { SourcePanel } from './SourcePanel';
 import { TargetPanel } from './TargetPanel';
 import { LanguageSelect } from './LanguageSelect';
+import { FallbackToast } from './FallbackToast';
 
 interface TranslatorPanelProps {
     /** Entry restored from history; the parent remounts the panel (via key) when it changes. */
     initialEntry: TranslationEntry | null;
     translationMode: TranslationMode;
-    meaningModel: string;
-    directModel: string;
-    reverseModel: string;
+    model: string;
     sourceLang: string;
     targetLang: string;
     onSourceLangChange: (lang: string) => void;
@@ -24,9 +23,7 @@ interface TranslatorPanelProps {
 export function TranslatorPanel({
     initialEntry,
     translationMode,
-    meaningModel,
-    directModel,
-    reverseModel,
+    model,
     sourceLang,
     targetLang,
     onSourceLangChange,
@@ -46,15 +43,15 @@ export function TranslatorPanel({
         setError,
         outputMode,
         handleTranslate,
-        cancelTranslation
+        cancelTranslation,
+        fallbackNotice,
+        dismissFallbackNotice
     } = useTranslation({
         sourceLang,
         targetLang,
         context,
         translationMode,
-        meaningModel,
-        directModel,
-        reverseModel,
+        model,
         initialEntry
     });
 
@@ -131,6 +128,8 @@ export function TranslatorPanel({
                     handleSpeakTarget={handleSpeakTarget}
                 />
             </div>
+
+            <FallbackToast notice={fallbackNotice} onClose={dismissFallbackNotice} />
         </div>
     );
 }

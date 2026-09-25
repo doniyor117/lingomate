@@ -21,8 +21,8 @@ LumenAI doesn't just do 1-to-1 translation. Choose the mode that fits your exact
 
 ### ⚡ Fast, Streaming AI Engine
 Powered by Google's low-latency **Gemini Flash-Lite** models. Translations stream in word by word as they're generated.
-*   **Gemini 3.5 Flash-Lite** (default) and **Gemini 3.1 Flash-Lite**, selectable per mode in Settings.
-*   **Automatic fallback**: if one model is rate-limited or slow to respond, the other takes over.
+*   **Gemini 3.5 Flash-Lite** (default) and **Gemini 3.1 Flash-Lite**, selectable in Settings for all modes.
+*   **Automatic fallback**: if the chosen model fails, is rate-limited or is slow to respond, the other one takes over, you get a notification, and LumenAI sticks with the fallback for 15 minutes before trying the main model again.
 
 ### 🎧 Audio & Voice Features
 *   **Speech-to-Text (STT)**: Speak directly into the app using native browser speech recognition.
