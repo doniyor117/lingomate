@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lumenai-v3';
+const CACHE_NAME = 'lingomate-v4';
 const SHELL_URL = '/';
 const STATIC_ASSETS = [
     '/manifest.json',

@@ -1,4 +1,4 @@
-# 🌐 LumenAI Translate
+# 🌐 LingoMate
 
 > **More than just words.** A smart, context-aware translator that understands nuance, slang, and multiple meanings.
 

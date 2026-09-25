@@ -14,7 +14,7 @@ export const SYSTEM_UI_LANGUAGE = 'system';
 
 const en = {
     'app.tagline': 'Smart translations with context',
-    'app.disclaimer': 'LumenAI is AI and can make mistakes.',
+    'app.disclaimer': 'LingoMate is AI and can make mistakes.',
     'header.install': 'Install',
     'header.settings': 'Settings',
     'header.history': 'View history',
@@ -93,12 +93,12 @@ const en = {
     'settings.languageDesc': 'Language of menus and buttons',
     'settings.languageSystem': 'System ({lang})',
     'settings.model': 'Model',
-    'settings.modelDesc': 'Used for all modes. If it fails, LumenAI switches to the other model for 15 minutes.',
+    'settings.modelDesc': 'Used for all modes. If it fails, LingoMate switches to the other model for 15 minutes.',
     'settings.modelAuto': 'Auto (Smart Selection)',
     'settings.done': 'Done',
     'settings.updated': 'Updated {date}',
 
-    'install.title': 'Install LumenAI',
+    'install.title': 'Install LingoMate',
     'install.available': 'Opens instantly from your home screen and works offline.',
     'install.ios': 'In Safari, tap Share, then “Add to Home Screen”.',
     'install.manual': 'Open your browser menu and choose “Install app” or “Add to Home screen”.',
@@ -118,7 +118,7 @@ type Messages = Record<MessageKey, string>;
 
 const uz: Messages = {
     'app.tagline': 'Kontekstni tushunadigan aqlli tarjimon',
-    'app.disclaimer': 'LumenAI — sun’iy intellekt, u xato qilishi mumkin.',
+    'app.disclaimer': 'LingoMate — sun’iy intellekt, u xato qilishi mumkin.',
     'header.install': 'O‘rnatish',
     'header.settings': 'Sozlamalar',
     'header.history': 'Tarixni ko‘rish',
@@ -197,12 +197,12 @@ const uz: Messages = {
     'settings.languageDesc': 'Menyu va tugmalar tili',
     'settings.languageSystem': 'Tizim tili ({lang})',
     'settings.model': 'Model',
-    'settings.modelDesc': 'Barcha rejimlar uchun. Ishlamay qolsa, LumenAI 15 daqiqaga boshqa modelga o‘tadi.',
+    'settings.modelDesc': 'Barcha rejimlar uchun. Ishlamay qolsa, LingoMate 15 daqiqaga boshqa modelga o‘tadi.',
     'settings.modelAuto': 'Avto (aqlli tanlov)',
     'settings.done': 'Tayyor',
     'settings.updated': 'Yangilangan: {date}',
 
-    'install.title': 'LumenAI’ni o‘rnating',
+    'install.title': 'LingoMate’ni o‘rnating',
     'install.available': 'Bosh ekrandan bir zumda ochiladi va internetsiz ham ishlaydi.',
     'install.ios': 'Safari’da «Ulashish»ni, so‘ng «Bosh ekranga qo‘shish»ni bosing.',
     'install.manual': 'Brauzer menyusini ochib, «Ilovani o‘rnatish» yoki «Bosh ekranga qo‘shish»ni tanlang.',
@@ -219,7 +219,7 @@ const uz: Messages = {
 
 const ru: Messages = {
     'app.tagline': 'Умный перевод с учётом контекста',
-    'app.disclaimer': 'LumenAI — это ИИ, он может ошибаться.',
+    'app.disclaimer': 'LingoMate — это ИИ, он может ошибаться.',
     'header.install': 'Установить',
     'header.settings': 'Настройки',
     'header.history': 'Открыть историю',
@@ -298,12 +298,12 @@ const ru: Messages = {
     'settings.languageDesc': 'Язык меню и кнопок',
     'settings.languageSystem': 'Системный ({lang})',
     'settings.model': 'Модель',
-    'settings.modelDesc': 'Используется во всех режимах. При сбое LumenAI на 15 минут переключится на другую модель.',
+    'settings.modelDesc': 'Используется во всех режимах. При сбое LingoMate на 15 минут переключится на другую модель.',
     'settings.modelAuto': 'Авто (умный выбор)',
     'settings.done': 'Готово',
     'settings.updated': 'Обновлено: {date}',
 
-    'install.title': 'Установите LumenAI',
+    'install.title': 'Установите LingoMate',
     'install.available': 'Открывается с главного экрана и работает офлайн.',
     'install.ios': 'В Safari нажмите «Поделиться», затем «На экран „Домой“».',
     'install.manual': 'Откройте меню браузера и выберите «Установить приложение» или «Добавить на главный экран».',

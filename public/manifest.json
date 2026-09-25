@@ -1,8 +1,8 @@
 {
-    "name": "LumenAI Translate",
-    "short_name": "LumenAI",
+    "name": "LingoMate",
+    "short_name": "LingoMate",
     "id": "/",
-    "description": "Smart AI-powered translations with context and multiple meanings",
+    "description": "Smart AI translator and dictionary: meanings, examples, slang and natural translations",
     "start_url": "/",
     "scope": "/",
     "display": "standalone",

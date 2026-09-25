@@ -44,7 +44,7 @@ export default function Home() {
                 <div className="flex items-center gap-3 pointer-events-auto">
                     <Image
                         src="/icon-192.png"
-                        alt="LumenAI logo"
+                        alt="LingoMate logo"
                         width={40}
                         height={40}
                         priority
@@ -52,7 +52,7 @@ export default function Home() {
                     />
                     <div>
                         <h1 className="text-xl font-bold bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
-                            LumenAI
+                            LingoMate
                         </h1>
                         <p className="text-xs text-[var(--text-muted)] hidden sm:block">
                             {t('app.tagline')}
