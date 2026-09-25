@@ -1,31 +1,20 @@
 import { GOOGLE_MODELS, GROQ_MODELS, getModelProvider } from './models';
 import { buildMeaningPrompt, buildDirectPrompt, buildReverseLookupPrompt, PromptResult } from './prompts';
+import { OutputMode, TranslateRequest, TranslateResponse } from './types';
 
 // API endpoints
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
-const CONFIGURABLE_REASONING_MODELS = [
-    'qwen/qwen3-32b',
-    'openai/gpt-oss-120b',
-    'openai/gpt-oss-20b'
-];
+// Groq only accepts reasoning_effort "none" for Qwen; GPT-OSS accepts low/medium/high
+// and rejects "none" with a 400, which used to silently burn a fallback round trip.
+const REASONING_EFFORT: Record<string, string> = {
+    'qwen/qwen3-32b': 'none',
+    'openai/gpt-oss-120b': 'low',
+    'openai/gpt-oss-20b': 'low',
+};
 
-export type OutputMode = 'meaning' | 'direct' | 'reverse';
-
-export interface TranslateRequest {
-    text: string;
-    sourceLang: string;
-    targetLang: string;
-    context?: string;
-    mode?: string;
-    model?: string;
-}
-
-export interface TranslateResponse {
-    translation: string;
-    model: string;
-    mode: OutputMode;
-}
+// A hung upstream would otherwise block the whole fallback chain indefinitely.
+const REQUEST_TIMEOUT_MS = 20000;
 
 /**
  * Custom error class for rate limiting
@@ -55,11 +44,14 @@ async function translateWithGroq(
         max_tokens: 2000,
     };
 
-    if (CONFIGURABLE_REASONING_MODELS.includes(model)) {
-        body.reasoning_effort = "none";
+    const reasoningEffort = REASONING_EFFORT[model];
+    if (reasoningEffort) {
+        body.reasoning_effort = reasoningEffort;
+        if (reasoningEffort !== 'none') body.include_reasoning = false;
     }
 
     const response = await fetch(GROQ_URL, {
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${apiKey}`,
@@ -90,6 +82,7 @@ async function translateWithGemini(
 ): Promise<string> {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
     const response = await fetch(url, {
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

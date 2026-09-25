@@ -1,12 +1,6 @@
-export interface TranslationEntry {
-    id: string;
-    sourceText: string;
-    translatedText: string;
-    sourceLang: string;
-    targetLang: string;
-    context?: string;
-    timestamp: number;
-}
+import { TranslationEntry } from './types';
+
+export type { TranslationEntry };
 
 const HISTORY_KEY = 'translation_history';
 const MAX_HISTORY = 50;

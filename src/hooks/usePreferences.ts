@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-
-export type TranslationMode = 'meaning' | 'direct' | 'reverse';
+import { TranslationMode } from '@/lib/types';
 
 export function usePreferences() {
     const [mode, setMode] = useState<TranslationMode>('meaning');

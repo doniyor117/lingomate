@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { translate } from '@/lib/translate-service';
 import { getModelDisplayName } from '@/lib/models';
-
-const MAX_CHARS = 10000;
+import { MAX_CHARS } from '@/lib/constants';
 
 export async function POST(request: NextRequest) {
     try {

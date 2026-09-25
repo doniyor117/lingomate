@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import Image from 'next/image';
 import { TranslatorPanel } from '@/components/TranslatorPanel';
 import { HistorySidebar } from '@/components/HistorySidebar';
 import { SettingsModal } from '@/components/SettingsModal';
@@ -34,11 +35,14 @@ export default function Home() {
             {/* Header */}
             <header className="sticky top-0 z-50 flex items-center justify-between px-4 md:px-6 py-4 bg-gradient-to-b from-[var(--background)] to-transparent pointer-events-none">
                 <div className="flex items-center gap-3 pointer-events-auto">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
-                        <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
-                        </svg>
-                    </div>
+                    <Image
+                        src="/icon-192.png"
+                        alt="LumenAI logo"
+                        width={40}
+                        height={40}
+                        priority
+                        className="w-10 h-10 rounded-xl shadow-lg shadow-blue-500/30"
+                    />
                     <div>
                         <h1 className="text-xl font-bold bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
                             LumenAI

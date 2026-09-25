@@ -1,7 +1,13 @@
 import type { Metadata, Viewport } from 'next';
+import { Inter } from 'next/font/google';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { ServiceWorkerRegister } from '@/components/ServiceWorkerRegister';
 import './globals.css';
+
+const inter = Inter({ subsets: ['latin', 'cyrillic'], display: 'swap', variable: '--font-inter' });
+
+// Applies the saved theme before first paint so the page doesn't flash light -> dark.
+const themeScript = `try{var t=localStorage.getItem('theme');if(t!=='light'&&t!=='dark')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.classList.add(t)}catch(e){}`;
 
 export const metadata: Metadata = {
     title: 'LumenAI Translate | Smart Multi-Meaning Translation',
@@ -11,7 +17,7 @@ export const metadata: Metadata = {
     appleWebApp: {
         capable: true,
         statusBarStyle: 'black-translucent',
-        title: 'AI Translator',
+        title: 'LumenAI',
     },
     formatDetection: {
         telephone: false,
@@ -35,10 +41,9 @@ export default function RootLayout({
     children: React.ReactNode;
 }) {
     return (
-        <html lang="en" suppressHydrationWarning>
+        <html lang="en" className={inter.variable} suppressHydrationWarning>
             <head>
-                <link rel="apple-touch-icon" href="/icon.png" />
-                <meta name="apple-mobile-web-app-capable" content="yes" />
+                <script dangerouslySetInnerHTML={{ __html: themeScript }} />
                 <meta name="mobile-web-app-capable" content="yes" />
             </head>
             <body>
