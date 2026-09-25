@@ -18,6 +18,7 @@ function buildVersion() {
 const nextConfig = {
     env: {
         NEXT_PUBLIC_APP_VERSION: buildVersion(),
+        NEXT_PUBLIC_BUILD_TIME: String(Date.now()),
     },
     async headers() {
         return [

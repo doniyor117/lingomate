@@ -9,6 +9,7 @@ import { SourcePanel } from './SourcePanel';
 import { TargetPanel } from './TargetPanel';
 import { LanguageSelect } from './LanguageSelect';
 import { FallbackToast } from './FallbackToast';
+import { useCanSpeak } from '@/lib/voices';
 
 interface TranslatorPanelProps {
     /** Entry restored from history; the parent remounts the panel (via key) when it changes. */
@@ -57,7 +58,9 @@ export function TranslatorPanel({
     });
 
     const detectedLanguage = getDetectedLanguage(result);
-    const sourceSpeechLang = sourceLang !== 'auto' ? sourceLang : detectedLanguage ?? 'en';
+    const canSpeak = useCanSpeak();
+    // With Auto Detect the input's language is only known once a result detected it.
+    const sourceSpeechLang = sourceLang !== 'auto' ? sourceLang : detectedLanguage;
 
     const {
         isListening,
@@ -70,7 +73,7 @@ export function TranslatorPanel({
         handleSpeakTarget
     } = useSpeech({
         sourceLang,
-        sourceSpeechLang,
+        sourceSpeechLang: sourceSpeechLang ?? 'en',
         targetLang,
         setSourceText,
         targetSpeechText: result ? toSpeechText(result) : '',
@@ -118,6 +121,7 @@ export function TranslatorPanel({
                     isListening={isListening}
                     toggleListening={toggleListening}
                     isSpeakingSource={isSpeakingSource}
+                    canSpeakSource={!!sourceSpeechLang && canSpeak(sourceSpeechLang)}
                     handleSpeakSource={handleSpeakSource}
                     handleClear={handleClear}
                 />
@@ -132,7 +136,7 @@ export function TranslatorPanel({
                     isStreaming={isBusy && !isLoading}
                     isSpeakingTarget={isSpeakingTarget}
                     handleSpeakTarget={handleSpeakTarget}
-                    speech={{ speakingKey, speakItem, sourceLang: sourceSpeechLang, targetLang }}
+                    speech={{ speakingKey, speakItem, sourceLang: sourceSpeechLang ?? 'en', targetLang, canSpeak }}
                 />
             </div>
 

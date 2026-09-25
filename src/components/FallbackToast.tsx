@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { getModelDisplayName } from '@/lib/models';
+import { useI18n } from '@/lib/i18n';
 import { FALLBACK_DURATION_MS, FallbackNotice } from '@/lib/model-fallback';
 
 interface FallbackToastProps {
@@ -10,6 +11,7 @@ interface FallbackToastProps {
 const AUTO_DISMISS_MS = 8000;
 
 export function FallbackToast({ notice, onClose }: FallbackToastProps) {
+    const { t } = useI18n();
     useEffect(() => {
         if (!notice) return;
         const id = setTimeout(onClose, AUTO_DISMISS_MS);
@@ -30,16 +32,18 @@ export function FallbackToast({ notice, onClose }: FallbackToastProps) {
                 </svg>
                 <div className="flex-1 text-sm">
                     <p className="font-medium text-[var(--foreground)]">
-                        {getModelDisplayName(notice.failed)} failed
+                        {t('toast.failed', { model: getModelDisplayName(notice.failed) })}
                     </p>
                     <p className="text-[var(--text-muted)] mt-0.5">
-                        Using {getModelDisplayName(notice.using)} instead{notice.sticky ? ` for the next ${FALLBACK_DURATION_MS / 60000} minutes.` : '.'}
+                        {notice.sticky
+                            ? t('toast.using', { model: getModelDisplayName(notice.using), n: FALLBACK_DURATION_MS / 60000 })
+                            : t('toast.usingOnce', { model: getModelDisplayName(notice.using) })}
                     </p>
                 </div>
                 <button
                     onClick={onClose}
                     className="p-1 -m-1 rounded-md text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-hover)] transition-colors"
-                    aria-label="Dismiss notification"
+                    aria-label={t('toast.dismiss')}
                 >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

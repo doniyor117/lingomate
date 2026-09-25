@@ -1,4 +1,5 @@
 import { DictionaryResult, FindResult, Register } from '@/lib/types';
+import { MessageKey, useI18n } from '@/lib/i18n';
 
 /** Lets cards read individual words aloud. */
 export interface SpeechControls {
@@ -7,16 +8,20 @@ export interface SpeechControls {
     /** Language of the looked-up word (detected when the source is auto). */
     sourceLang: string;
     targetLang: string;
+    /** Whether the device has a voice for a language. */
+    canSpeak: (lang: string) => boolean;
 }
 
 function SpeakButton({ id, text, lang, speech }: { id: string; text: string; lang: string; speech: SpeechControls }) {
+    const { t } = useI18n();
     const playing = speech.speakingKey === id;
+    if (!speech.canSpeak(lang)) return null;
     return (
         <button
             type="button"
             onClick={() => speech.speakItem(id, text, lang)}
-            aria-label={playing ? `Stop reading ${text}` : `Listen to ${text}`}
-            title="Listen"
+            aria-label={playing ? t('input.stop') : t('result.listenTo', { text })}
+            title={t('result.listen')}
             className={`inline-flex items-center justify-center w-7 h-7 -my-1 rounded-full align-middle transition-colors flex-shrink-0 ${playing
                 ? 'text-[var(--primary)] bg-[var(--primary)]/15'
                 : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-hover)]'
@@ -38,10 +43,11 @@ const REGISTER_STYLES: Record<Exclude<Register, 'standard'>, string> = {
 };
 
 function RegisterTag({ register }: { register: Register }) {
+    const { t } = useI18n();
     if (register === 'standard') return null;
     return (
         <span className={`px-1.5 py-px rounded-md border text-[10px] font-semibold uppercase tracking-wide ${REGISTER_STYLES[register]}`}>
-            {register}
+            {t(`register.${register}` as MessageKey)}
         </span>
     );
 }

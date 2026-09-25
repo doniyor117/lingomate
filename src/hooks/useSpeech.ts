@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
+import { pickVoice } from '@/lib/voices';
+import { useI18n } from '@/lib/i18n';
 
 // Minimal typing for the non-standard webkitSpeechRecognition API.
 interface SpeechRecognitionLike {
@@ -25,20 +27,10 @@ interface UseSpeechParams {
     targetSpeechText: string;
 }
 
-// Prefers the higher-quality Google/Microsoft voices for a language when installed.
-function speak(text: string, lang: string, onDone: () => void) {
+function speak(text: string, voice: SpeechSynthesisVoice, onDone: () => void) {
     const utterance = new SpeechSynthesisUtterance(text);
-    const voices = window.speechSynthesis.getVoices().filter((v) =>
-        v.lang === lang || v.lang.replace('_', '-').startsWith(lang + '-')
-    );
-    const voice = voices.find((v) => v.name.includes('Google') || v.name.includes('Microsoft')) || voices[0];
-
-    if (voice) {
-        utterance.voice = voice;
-        utterance.lang = voice.lang;
-    } else {
-        utterance.lang = lang;
-    }
+    utterance.voice = voice;
+    utterance.lang = voice.lang;
     utterance.onend = onDone;
     utterance.onerror = onDone;
     window.speechSynthesis.speak(utterance);
@@ -55,6 +47,7 @@ export function useSpeech({
     // Which item is being read aloud ('source', 'target', or a result item's key).
     const [speakingKey, setSpeakingKey] = useState<string | null>(null);
     const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+    const { t } = useI18n();
 
     // Ensure speech stops on unmount
     useEffect(() => {
@@ -97,7 +90,7 @@ export function useSpeech({
     const toggleListening = () => {
         const recognition = getRecognition();
         if (!recognition) {
-            alert('Speech recognition is not supported in this browser. Please use Chrome or Edge.');
+            alert(t('speech.unsupported'));
             return;
         }
 
@@ -115,12 +108,15 @@ export function useSpeech({
     /** Reads `text` aloud, or stops it if that item is already playing. */
     const speakItem = (key: string, text: string, lang: string) => {
         window.speechSynthesis.cancel();
-        if (speakingKey === key || !text.trim()) {
+        // No voice for this language on this device: reading it with another
+        // language's voice would be gibberish, so don't read at all.
+        const voice = pickVoice(lang);
+        if (speakingKey === key || !text.trim() || !voice) {
             setSpeakingKey(null);
             return;
         }
         setSpeakingKey(key);
-        speak(text, lang, () => setSpeakingKey((current) => (current === key ? null : current)));
+        speak(text, voice, () => setSpeakingKey((current) => (current === key ? null : current)));
     };
 
     const handleSpeakSource = (text: string) => speakItem('source', text, sourceSpeechLang);

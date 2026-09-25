@@ -1,9 +1,11 @@
 'use client';
 
 import { useTheme } from './ThemeProvider';
+import { useI18n } from '@/lib/i18n';
 
 export function ThemeToggle() {
     const { theme, setTheme } = useTheme();
+    const { t } = useI18n();
 
     return (
         <div className="flex items-center gap-1 p-1 rounded-lg bg-[var(--surface)] border border-[var(--border)]">
@@ -13,8 +15,8 @@ export function ThemeToggle() {
                         ? 'bg-[var(--primary)] text-white'
                         : 'text-[var(--text-muted)] hover:text-[var(--foreground)]'
                     }`}
-                title="Light mode"
-                aria-label="Light mode"
+                title={t('theme.light')}
+                aria-label={t('theme.light')}
             >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path
@@ -32,8 +34,8 @@ export function ThemeToggle() {
                         ? 'bg-[var(--primary)] text-white'
                         : 'text-[var(--text-muted)] hover:text-[var(--foreground)]'
                     }`}
-                title="Dark mode"
-                aria-label="Dark mode"
+                title={t('theme.dark')}
+                aria-label={t('theme.dark')}
             >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path
@@ -51,8 +53,8 @@ export function ThemeToggle() {
                         ? 'bg-[var(--primary)] text-white'
                         : 'text-[var(--text-muted)] hover:text-[var(--foreground)]'
                     }`}
-                title="System preference"
-                aria-label="System preference"
+                title={t('theme.system')}
+                aria-label={t('theme.system')}
             >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path

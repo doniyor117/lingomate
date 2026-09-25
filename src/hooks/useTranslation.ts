@@ -5,6 +5,7 @@ import { resolveModel } from '@/lib/models';
 import { resolveMode } from '@/lib/modes';
 import { entryToResult, hasContent, parseOutput, parseTranslateOutput, serializeResult } from '@/lib/results';
 import { FallbackNotice, pickModel, recordModelResult } from '@/lib/model-fallback';
+import { useI18n } from '@/lib/i18n';
 
 interface UseTranslationParams {
     sourceLang: string;
@@ -29,6 +30,7 @@ export function useTranslation({
     const [error, setError] = useState('');
     const [fallbackNotice, setFallbackNotice] = useState<FallbackNotice | null>(null);
     const abortRef = useRef<AbortController | null>(null);
+    const { t } = useI18n();
 
     const cancelTranslation = useCallback(() => {
         abortRef.current?.abort();
@@ -74,7 +76,8 @@ export function useTranslation({
 
             if (!response.ok || !response.body) {
                 const data = await response.json().catch(() => ({}));
-                throw new Error(data.error || 'Translation failed');
+                // Server-side failures get a friendly message; validation errors say what's wrong.
+                throw new Error(response.status < 500 && data.error ? data.error : t('error.failed'));
             }
 
             const used = response.headers.get('X-Model');
@@ -99,7 +102,7 @@ export function useTranslation({
             try {
                 final = parseOutput(outputMode, raw, expectLangTag);
             } catch {
-                throw new Error('Couldn’t read the response. Please try again.');
+                throw new Error(t('error.unreadable'));
             }
             setResult(final);
 
@@ -113,14 +116,15 @@ export function useTranslation({
             });
         } catch (err) {
             if (controller.signal.aborted) return;
-            setError(err instanceof Error ? err.message : 'Translation failed');
+            // fetch() rejects with a TypeError on network failures; its message is browser-specific.
+            setError(err instanceof Error && !(err instanceof TypeError) ? err.message : t('error.failed'));
         } finally {
             if (abortRef.current === controller) {
                 abortRef.current = null;
                 setIsBusy(false);
             }
         }
-    }, [sourceText, sourceLang, targetLang, context, mode, model]);
+    }, [sourceText, sourceLang, targetLang, context, mode, model, t]);
 
     const dismissFallbackNotice = useCallback(() => setFallbackNotice(null), []);
 

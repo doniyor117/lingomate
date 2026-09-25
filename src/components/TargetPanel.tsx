@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { TranslationResult } from '@/lib/types';
-import { getLanguageByCode } from '@/lib/languages';
+import { useI18n } from '@/lib/i18n';
 import { hasContent, toCopyText } from '@/lib/results';
 import { DictionaryView, FindView, SpeechControls } from './ResultViews';
 
@@ -23,26 +23,19 @@ interface TargetPanelProps {
     speech: SpeechControls;
 }
 
-function languageLabel(code: string) {
-    const lang = getLanguageByCode(code);
-    return lang ? `${lang.name} ${lang.flag}` : code.toUpperCase();
-}
-
 function DetectedLanguage({ code }: { code: string }) {
+    const { t, languageName } = useI18n();
     return (
         <p className="mb-3 text-xs text-[var(--text-muted)]">
-            Detected: <span className="font-medium text-[var(--foreground)]">{languageLabel(code)}</span>
+            {t('result.detected')} <span className="font-medium text-[var(--foreground)]">{languageName(code)}</span>
         </p>
     );
 }
 
 // Translate mode with text already in the target language returns a corrected version.
 function CorrectedNotice({ code }: { code: string }) {
-    return (
-        <p className="mb-3 text-xs text-[var(--text-muted)]">
-            Already in <span className="font-medium text-[var(--foreground)]">{languageLabel(code)}</span> · showing a grammar-corrected version
-        </p>
-    );
+    const { t, languageName } = useI18n();
+    return <p className="mb-3 text-xs text-[var(--text-muted)]">{t('result.corrected', { lang: languageName(code) })}</p>;
 }
 
 function ResultBody({ result, isStreaming, speech }: { result: TranslationResult; isStreaming: boolean; speech: SpeechControls }) {
@@ -75,7 +68,9 @@ export function TargetPanel({
     handleSpeakTarget,
     speech
 }: TargetPanelProps) {
+    const { t, languageName } = useI18n();
     const [copied, setCopied] = useState(false);
+    const canSpeakTarget = speech.canSpeak(targetLang);
     const showResult = !error && !isLoading && hasContent(result);
 
     const handleCopy = async () => {
@@ -119,7 +114,7 @@ export function TargetPanel({
                         <ResultBody result={result} isStreaming={isStreaming} speech={speech} />
                     </>
                 ) : (
-                    <p className="text-[var(--text-muted)] italic">Translation will appear here...</p>
+                    <p className="text-[var(--text-muted)] italic">{t('result.placeholder')}</p>
                 )}
             </div>
 
@@ -129,16 +124,19 @@ export function TargetPanel({
                     {(result?.mode === 'translate' || result?.mode === 'legacy') && (
                         <button
                             onClick={handleSpeakTarget}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors ${isSpeakingTarget
-                                ? 'text-[var(--primary)] bg-[var(--border)] font-medium'
-                                : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--border)]'
+                            disabled={!canSpeakTarget}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors ${!canSpeakTarget
+                                ? 'text-[var(--text-muted)] opacity-60 cursor-not-allowed'
+                                : isSpeakingTarget
+                                    ? 'text-[var(--primary)] bg-[var(--border)] font-medium'
+                                    : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--border)]'
                                 }`}
-                            title="Listen"
+                            title={canSpeakTarget ? t('result.listen') : t('result.noVoiceHint')}
                         >
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
                             </svg>
-                            {isSpeakingTarget ? 'Playing…' : 'Listen'}
+                            {!canSpeakTarget ? t('result.noVoice', { lang: languageName(targetLang) }) : isSpeakingTarget ? t('result.playing') : t('result.listen')}
                         </button>
                     )}
                     <button
@@ -147,7 +145,7 @@ export function TargetPanel({
                             ? 'text-green-600 font-medium'
                             : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--border)]'
                             }`}
-                        title="Copy"
+                        title={t('result.copy')}
                     >
                         {copied ? (
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -158,7 +156,7 @@ export function TargetPanel({
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                             </svg>
                         )}
-                        {copied ? 'Copied' : 'Copy'}
+                        {copied ? t('result.copied') : t('result.copy')}
                     </button>
                 </div>
             )}

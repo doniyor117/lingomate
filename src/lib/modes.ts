@@ -1,50 +1,18 @@
 import { OutputMode, TranslationMode } from './types';
-
-export interface ModeInfo {
-    id: TranslationMode;
-    label: string;
-    description: string;
-    placeholder: string;
-}
+import type { MessageKey } from './i18n';
 
 // Up to this many words counts as a word/phrase lookup in Auto mode.
 export const AUTO_DICTIONARY_MAX_WORDS = 5;
 
-export const MODES: ModeInfo[] = [
-    {
-        id: 'auto',
-        label: 'Auto',
-        description: `Dictionary for up to ${AUTO_DICTIONARY_MAX_WORDS} words, Translate for longer text`,
-        placeholder: 'Enter a word or text…',
-    },
-    {
-        id: 'dictionary',
-        label: 'Dictionary',
-        description: 'Meanings, examples and pronunciation',
-        placeholder: 'Enter a word or phrase…',
-    },
-    {
-        id: 'translate',
-        label: 'Translate',
-        description: 'Natural translation of sentences and text',
-        placeholder: 'Enter text to translate…',
-    },
-    {
-        id: 'find',
-        label: 'Find a word',
-        description: 'Describe something, get the word for it',
-        placeholder: 'Describe the word you’re looking for…',
-    },
-];
+export const MODE_IDS: TranslationMode[] = ['auto', 'dictionary', 'translate', 'find'];
 
-export const MODE_IDS = MODES.map((m) => m.id);
-
-export function getModeInfo(id: TranslationMode): ModeInfo {
-    return MODES.find((m) => m.id === id) ?? MODES[0];
+/** Translation keys for a mode's label, description and input placeholder. */
+export function modeKey(mode: TranslationMode, field: 'label' | 'desc' | 'placeholder'): MessageKey {
+    return `mode.${mode}.${field}` as MessageKey;
 }
 
 // Scripts written without spaces between words.
-const UNSPACED_SCRIPT = /[぀-ヿ㐀-鿿가-힯฀-๿]/g;
+const UNSPACED_SCRIPT = /[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af\u0e00-\u0e7f]/g;
 
 function countWords(text: string): number {
     const trimmed = text.trim();

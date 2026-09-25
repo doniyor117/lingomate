@@ -69,22 +69,10 @@ export const languages: Language[] = [
     { code: 'sv', name: 'Swedish', nativeName: 'Svenska', flag: '🇸🇪' },
     { code: 'ta', name: 'Tamil', nativeName: 'தமிழ்', flag: '🇮🇳' },
     { code: 'te', name: 'Telugu', nativeName: 'తెలుగు', flag: '🇮🇳' },
-    { code: 'kk', name: 'Kazakh', nativeName: 'Қазақша', flag: '🇰🇿' },
-    { code: 'az', name: 'Azerbaijani', nativeName: 'Azərbaycan', flag: '🇦🇿' },
     { code: 'ky', name: 'Kyrgyz', nativeName: 'Кыргызча', flag: '🇰🇬' },
     { code: 'tk', name: 'Turkmen', nativeName: 'Türkmençe', flag: '🇹🇲' },
 ];
 
 export function getLanguageByCode(code: string): Language | undefined {
     return languages.find((lang) => lang.code === code);
-}
-
-export function searchLanguages(query: string): Language[] {
-    const lowerQuery = query.toLowerCase();
-    return languages.filter(
-        (lang) =>
-            lang.name.toLowerCase().includes(lowerQuery) ||
-            lang.nativeName.toLowerCase().includes(lowerQuery) ||
-            lang.code.toLowerCase().includes(lowerQuery)
-    );
 }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { languages, searchLanguages } from '@/lib/languages';
+import { languages } from '@/lib/languages';
+import { useI18n } from '@/lib/i18n';
 
 interface LanguageModalProps {
     isOpen: boolean;
@@ -23,6 +24,7 @@ function LanguageModalContent({
     selectedCode
 }: Omit<LanguageModalProps, 'isOpen'>) {
     const [searchQuery, setSearchQuery] = useState('');
+    const { t, languageName } = useI18n();
 
     useEffect(() => {
         document.body.style.overflow = 'hidden';
@@ -31,8 +33,11 @@ function LanguageModalContent({
         };
     }, []);
 
-    let displayLanguages = searchQuery.trim() 
-        ? searchLanguages(searchQuery) 
+    // Match the localized name as well as the English and native names.
+    const query = searchQuery.trim().toLowerCase();
+    let displayLanguages = query
+        ? languages.filter((l) =>
+            [languageName(l.code), l.name, l.nativeName, l.code].some((n) => n.toLowerCase().includes(query)))
         : languages;
 
     if (hideAuto) {
@@ -67,7 +72,7 @@ function LanguageModalContent({
                         </svg>
                         <input
                             type="text"
-                            placeholder="Search languages..."
+                            placeholder={t('lang.search')}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full pl-10 pr-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-[var(--primary)] outline-none transition-shadow text-[var(--foreground)]"
@@ -78,7 +83,7 @@ function LanguageModalContent({
                 <div className="flex-1 overflow-y-auto p-2">
                     {displayLanguages.length === 0 ? (
                         <div className="text-center py-10 text-[var(--text-muted)]">
-                            No languages found for &ldquo;{searchQuery}&rdquo;
+                            {t('lang.notFound', { q: searchQuery })}
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
@@ -97,7 +102,7 @@ function LanguageModalContent({
                                 >
                                     <div className="flex items-center gap-3">
                                         <span className="text-2xl" aria-hidden="true">{lang.flag}</span>
-                                        <span className="truncate">{lang.name}</span>
+                                        <span className="truncate">{languageName(lang.code)}</span>
                                     </div>
                                     {selectedCode === lang.code && (
                                         <svg className="w-5 h-5 text-[var(--primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">

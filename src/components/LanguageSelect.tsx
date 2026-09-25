@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { getLanguageByCode } from '@/lib/languages';
 import { LanguageModal } from './LanguageModal';
+import { useI18n } from '@/lib/i18n';
 
 interface LanguageSelectProps {
     sourceLang: string;
@@ -20,6 +21,7 @@ export function LanguageSelect({
     const [isSourceModalOpen, setIsSourceModalOpen] = useState(false);
     const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
 
+    const { t, languageName } = useI18n();
     const sourceObj = getLanguageByCode(sourceLang);
     const targetObj = getLanguageByCode(targetLang);
 
@@ -29,10 +31,10 @@ export function LanguageSelect({
             <button
                 onClick={() => setIsSourceModalOpen(true)}
                 className="w-1/2 p-3 pr-8 flex items-center justify-center sm:justify-start gap-2 hover:bg-[var(--surface-hover)] rounded-lg transition-colors group"
-                aria-label="Select source language"
+                aria-label={t('lang.selectSource')}
             >
                 <span className="font-medium text-[var(--foreground)] truncate">
-                    {sourceObj ? sourceObj.name : 'Select Language'}
+                    {sourceObj ? languageName(sourceObj.code) : t('lang.select')}
                 </span>
                 <span className="flex-shrink-0 text-xl" aria-hidden="true">{sourceObj?.flag}</span>
                 <svg className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[var(--foreground)] transition-colors flex-shrink-0 ml-auto hidden sm:block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -45,8 +47,8 @@ export function LanguageSelect({
                 <button
                     onClick={handleSwapLanguages}
                     className="p-2.5 rounded-full hover:bg-[var(--surface-hover)] transition-all active:scale-95 group border border-[var(--border)] bg-[var(--background)] shadow-sm hover:shadow"
-                    title="Swap languages"
-                    aria-label="Swap languages"
+                    title={t('lang.swap')}
+                    aria-label={t('lang.swap')}
                 >
                     <svg className="w-5 h-5 text-[var(--text-muted)] group-hover:text-[var(--primary)] transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
@@ -58,11 +60,11 @@ export function LanguageSelect({
             <button
                 onClick={() => setIsTargetModalOpen(true)}
                 className="w-1/2 p-3 pl-8 flex items-center justify-center sm:justify-end gap-2 hover:bg-[var(--surface-hover)] rounded-lg transition-colors group"
-                aria-label="Select target language"
+                aria-label={t('lang.selectTarget')}
             >
                 <span className="flex-shrink-0 text-xl hidden sm:block" aria-hidden="true">{targetObj?.flag}</span>
                 <span className="font-medium text-[var(--foreground)] truncate">
-                    {targetObj ? targetObj.name : 'Select Language'}
+                    {targetObj ? languageName(targetObj.code) : t('lang.select')}
                 </span>
                 <span className="flex-shrink-0 text-xl sm:hidden" aria-hidden="true">{targetObj?.flag}</span>
                 <svg className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[var(--foreground)] transition-colors flex-shrink-0 hidden sm:block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -74,7 +76,7 @@ export function LanguageSelect({
                 isOpen={isSourceModalOpen}
                 onClose={() => setIsSourceModalOpen(false)}
                 onSelect={setSourceLang}
-                title="Translate from"
+                title={t('lang.from')}
                 selectedCode={sourceLang}
             />
 
@@ -82,7 +84,7 @@ export function LanguageSelect({
                 isOpen={isTargetModalOpen}
                 onClose={() => setIsTargetModalOpen(false)}
                 onSelect={setTargetLang}
-                title="Translate to"
+                title={t('lang.to')}
                 hideAuto={true}
                 selectedCode={targetLang}
             />
