@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { ServiceWorkerRegister } from '@/components/ServiceWorkerRegister';
 import { VersionCheck } from '@/components/VersionCheck';
+import { domainMigrationScript } from '@/lib/domain-migration';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin', 'cyrillic'], display: 'swap', variable: '--font-inter' });
@@ -45,6 +46,8 @@ export default function RootLayout({
     return (
         <html lang="en" className={inter.variable} suppressHydrationWarning>
             <head>
+                {/* Runs first: forwards visitors from the old LumenAI addresses along with their data. */}
+                <script dangerouslySetInnerHTML={{ __html: domainMigrationScript }} />
                 <script dangerouslySetInnerHTML={{ __html: themeScript }} />
                 <meta name="mobile-web-app-capable" content="yes" />
             </head>

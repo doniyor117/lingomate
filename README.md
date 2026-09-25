@@ -11,7 +11,7 @@
 
 ## ✨ Features
 
-![Alt Text](public/lumenai_interface.png)
+![LingoMate dictionary view](public/screenshot.png)
 
 ### 🧠 Translation Modes
 Pick a mode right next to the input (or leave it on **Auto**):
