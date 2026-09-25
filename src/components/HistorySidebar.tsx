@@ -81,28 +81,30 @@ export function HistorySidebar({ isOpen, onClose, onSelect }: HistorySidebarProp
                                     tabIndex={0}
                                     onClick={() => onSelect(entry)}
                                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(entry); } }}
-                                    className="w-full p-4 text-left hover:bg-[var(--surface-hover)] transition-colors group cursor-pointer"
+                                    className="w-full py-3.5 pl-4 pr-3 text-left hover:bg-[var(--surface-hover)] transition-colors group cursor-pointer"
                                 >
-                                    <div className="flex items-start justify-between gap-2">
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 text-xs text-[var(--text-muted)] mb-1 min-w-0">
-                                                {entry.mode && (
-                                                    <span className="flex-shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[var(--surface-hover)] border border-[var(--border)] text-[var(--foreground)] font-medium whitespace-nowrap" title={t(modeKey(entry.mode, 'label'))}>
-                                                        <ModeIcon mode={entry.mode} className="w-3 h-3" />
-                                                        {t(modeKey(entry.mode, 'label'))}
-                                                    </span>
-                                                )}
-                                                <span className="truncate min-w-0">
-                                                    {languageName(entry.sourceLang)} → {languageName(entry.targetLang)}
-                                                </span>
-                                                <span className="ml-auto flex-shrink-0 whitespace-nowrap">{formatRelativeTime(entry.timestamp, uiLang, t('time.now'))}</span>
-                                            </div>
-                                            <p className="text-sm font-medium truncate mb-1">{entry.sourceText}</p>
-                                            <p className="text-sm text-[var(--text-muted)] truncate">{toPreview(entryToResult(entry))}</p>
-                                        </div>
+                                    <div className="flex items-center gap-2 text-xs text-[var(--text-muted)] mb-1 min-w-0">
+                                        {entry.mode && (
+                                            <span className="flex-shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[var(--surface-hover)] border border-[var(--border)] text-[var(--foreground)] font-medium whitespace-nowrap" title={t(modeKey(entry.mode, 'label'))}>
+                                                <ModeIcon mode={entry.mode} className="w-3 h-3" />
+                                                {t(modeKey(entry.mode, 'label'))}
+                                            </span>
+                                        )}
+                                        <span className="truncate min-w-0">
+                                            {languageName(entry.sourceLang)} → {languageName(entry.targetLang)}
+                                        </span>
+                                        {/* Flush right, so it never pushes into the languages or the text. */}
+                                        <span className="ml-auto pl-1 flex-shrink-0 whitespace-nowrap text-[11px] opacity-80">
+                                            {formatRelativeTime(entry.timestamp, uiLang, t('time.now'))}
+                                        </span>
+                                    </div>
+                                    <p className="text-sm font-medium truncate mb-1">{entry.sourceText}</p>
+                                    <div className="flex items-center gap-2">
+                                        <p className="flex-1 min-w-0 text-sm text-[var(--text-muted)] truncate">{toPreview(entryToResult(entry))}</p>
+                                        {/* Always visible on touch screens, where there's no hover. */}
                                         <button
                                             onClick={(e) => handleDelete(entry.id, e)}
-                                            className="p-1.5 opacity-0 group-hover:opacity-100 hover:bg-[var(--surface)] rounded transition-all"
+                                            className="-my-1 p-1.5 flex-shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100 [@media(hover:none)]:opacity-60 hover:bg-[var(--surface)] rounded transition-all"
                                             aria-label={t('history.delete')}
                                         >
                                             <svg className="w-4 h-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
