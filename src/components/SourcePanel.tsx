@@ -114,7 +114,7 @@ export function SourcePanel({
                             <span className="w-px h-4 bg-[var(--border)]" aria-hidden="true" />
                             <button
                                 onClick={() => handleSpeakSource(sourceText)}
-                                className={`h-full px-2.5 flex items-center transition-colors animate-fade-in ${isSpeakingSource ? 'text-[var(--primary)] bg-[var(--primary)]/10' : 'hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)]'}`}
+                                className={`h-full px-2.5 flex items-center transition-colors animate-fade-in ${isSpeakingSource ? 'text-[var(--primary)] bg-accent/10' : 'hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)]'}`}
                                 title={t('input.listen')}
                                 aria-label={t('input.listen')}
                             >
@@ -133,7 +133,7 @@ export function SourcePanel({
                     aria-label={t('input.context')}
                     title={t('input.contextHint')}
                     className={`relative h-8 px-2.5 flex items-center gap-1.5 rounded-full border text-xs font-medium transition-colors ${contextActive
-                        ? 'border-[var(--primary)] text-[var(--primary)] bg-[var(--primary)]/10'
+                        ? 'border-[var(--primary)] text-[var(--primary)] bg-accent/10'
                         : 'border-[var(--border)] text-[var(--foreground)] bg-[var(--surface)] hover:bg-[var(--surface-hover)]'
                         }`}
                 >

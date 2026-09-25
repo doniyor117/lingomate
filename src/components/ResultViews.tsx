@@ -23,7 +23,7 @@ function SpeakButton({ id, text, lang, speech }: { id: string; text: string; lan
             aria-label={playing ? t('input.stop') : t('result.listenTo', { text })}
             title={t('result.listen')}
             className={`inline-flex items-center justify-center w-7 h-7 -my-1 rounded-full align-middle transition-colors flex-shrink-0 ${playing
-                ? 'text-[var(--primary)] bg-[var(--primary)]/15'
+                ? 'text-[var(--primary)] bg-accent/15'
                 : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-hover)]'
                 }`}
         >

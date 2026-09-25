@@ -96,7 +96,7 @@ function LanguageModalContent({
                                     }}
                                     className={`flex items-center justify-between p-3 rounded-lg text-left transition-colors ${
                                         selectedCode === lang.code
-                                            ? 'bg-[var(--primary)]/10 text-[var(--primary)] font-medium'
+                                            ? 'bg-accent/10 text-[var(--primary)] font-medium'
                                             : 'hover:bg-[var(--surface-hover)] text-[var(--foreground)]'
                                     }`}
                                 >

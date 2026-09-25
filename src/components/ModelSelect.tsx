@@ -50,7 +50,7 @@ export function ModelSelect({ value, onChange, options }: ModelSelectProps) {
                             key={option.id}
                             role="option"
                             aria-selected={value === option.id}
-                            className={`w-full text-left px-3 py-2 text-sm transition-colors ${value === option.id ? 'bg-[var(--primary)]/10 text-[var(--primary)] font-medium' : 'text-[var(--foreground)] hover:bg-[var(--surface-hover)]'}`}
+                            className={`w-full text-left px-3 py-2 text-sm transition-colors ${value === option.id ? 'bg-accent/10 text-[var(--primary)] font-medium' : 'text-[var(--foreground)] hover:bg-[var(--surface-hover)]'}`}
                             onClick={() => {
                                 onChange(option.id);
                                 setIsOpen(false);

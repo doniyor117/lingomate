@@ -68,7 +68,7 @@ export function ModePicker({ value, onChange }: ModePickerProps) {
                 aria-expanded={isOpen}
                 aria-label={t('mode.button', { mode: currentLabel })}
                 className={`h-8 pl-2.5 pr-2 flex items-center gap-1.5 rounded-full border text-xs font-medium transition-colors ${isOpen
-                    ? 'border-[var(--primary)] text-[var(--primary)] bg-[var(--primary)]/10'
+                    ? 'border-[var(--primary)] text-[var(--primary)] bg-accent/10'
                     : 'border-[var(--border)] text-[var(--foreground)] bg-[var(--surface)] hover:bg-[var(--surface-hover)]'
                     }`}
             >
@@ -97,7 +97,7 @@ export function ModePicker({ value, onChange }: ModePickerProps) {
                                     onChange(id);
                                     setIsOpen(false);
                                 }}
-                                className={`w-full flex items-start gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${selected ? 'bg-[var(--primary)]/10' : 'hover:bg-[var(--surface-hover)]'}`}
+                                className={`w-full flex items-start gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${selected ? 'bg-accent/10' : 'hover:bg-[var(--surface-hover)]'}`}
                             >
                                 <ModeIcon mode={id} className={`w-5 h-5 mt-0.5 flex-shrink-0 ${selected ? 'text-[var(--primary)]' : 'text-[var(--text-muted)]'}`} />
                                 <span className="flex-1 min-w-0">
