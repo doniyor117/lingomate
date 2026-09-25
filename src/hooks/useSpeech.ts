@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { languages } from '@/lib/languages';
 
 // Minimal typing for the non-standard webkitSpeechRecognition API.
 interface SpeechRecognitionLike {
@@ -16,19 +15,41 @@ interface SpeechRecognitionLike {
 type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
 
 interface UseSpeechParams {
+    /** Source language as selected; may be "auto". */
     sourceLang: string;
+    /** Language to read the source text in (detected language when source is auto). */
+    sourceSpeechLang: string;
     targetLang: string;
     setSourceText: (text: string) => void;
-    translatedText: string;
-    outputMode: string;
+    /** What "Listen" reads for the result, already reduced to target-language words. */
+    targetSpeechText: string;
+}
+
+// Prefers the higher-quality Google/Microsoft voices for a language when installed.
+function speak(text: string, lang: string, onDone: () => void) {
+    const utterance = new SpeechSynthesisUtterance(text);
+    const voices = window.speechSynthesis.getVoices().filter((v) =>
+        v.lang === lang || v.lang.replace('_', '-').startsWith(lang + '-')
+    );
+    const voice = voices.find((v) => v.name.includes('Google') || v.name.includes('Microsoft')) || voices[0];
+
+    if (voice) {
+        utterance.voice = voice;
+        utterance.lang = voice.lang;
+    } else {
+        utterance.lang = lang;
+    }
+    utterance.onend = onDone;
+    utterance.onerror = onDone;
+    window.speechSynthesis.speak(utterance);
 }
 
 export function useSpeech({
     sourceLang,
+    sourceSpeechLang,
     targetLang,
     setSourceText,
-    translatedText,
-    outputMode
+    targetSpeechText
 }: UseSpeechParams) {
     const [isListening, setIsListening] = useState(false);
     const [isSpeakingSource, setIsSpeakingSource] = useState(false);
@@ -91,122 +112,32 @@ export function useSpeech({
         }
     };
 
-    const parseDetectedLangCode = (text: string): string => {
-        if (!text) return 'en';
-        const match = text.match(/Detected Language:\s*([A-Za-z\s]+)(?:[\uD83C-\uDBFF\uDC00-\uDFFF\u2000-\u32FF])?/i);
-        if (match && match[1]) {
-            const langName = match[1].trim();
-            const found = languages.find(l => l.name.toLowerCase() === langName.toLowerCase());
-            if (found) return found.code;
-        }
-        return 'en';
-    };
-
     const handleSpeakSource = (text: string) => {
         if (!text.trim()) return;
-
         window.speechSynthesis.cancel();
+        setIsSpeakingTarget(false);
 
         if (isSpeakingSource) {
             setIsSpeakingSource(false);
             return;
         }
 
-        const utterance = new SpeechSynthesisUtterance(text);
-        
-        let resolvedLang = sourceLang;
-        if (resolvedLang === 'auto' && translatedText) {
-            resolvedLang = parseDetectedLangCode(translatedText);
-        }
-        if (resolvedLang === 'auto') {
-            resolvedLang = 'en';
-        }
-
-        const freshVoices = window.speechSynthesis.getVoices();
-        const matchingVoices = freshVoices.filter(v =>
-            v.lang === resolvedLang ||
-            v.lang.replace('_', '-').startsWith(resolvedLang + '-')
-        );
-
-        const selectedVoice = matchingVoices.find(v =>
-            v.name.includes('Google') || v.name.includes('Microsoft')
-        ) || matchingVoices[0] || null;
-
-        if (selectedVoice) {
-            utterance.voice = selectedVoice;
-            utterance.lang = selectedVoice.lang;
-        } else {
-            utterance.lang = resolvedLang;
-        }
-
-        utterance.onend = () => setIsSpeakingSource(false);
-        utterance.onerror = () => setIsSpeakingSource(false);
-
         setIsSpeakingSource(true);
-        window.speechSynthesis.speak(utterance);
+        speak(text, sourceSpeechLang, () => setIsSpeakingSource(false));
     };
 
     const handleSpeakTarget = () => {
-        if (!translatedText) return;
-
+        if (!targetSpeechText) return;
         window.speechSynthesis.cancel();
+        setIsSpeakingSource(false);
 
         if (isSpeakingTarget) {
             setIsSpeakingTarget(false);
             return;
         }
 
-        let textToRead = translatedText;
-
-        // Clean up markdown for meaning/reverse modes
-        if (outputMode !== 'direct') {
-            const lines = translatedText.split('\n');
-            const translationWords: string[] = [];
-            for (const line of lines) {
-                // Find lines starting with a number, then optional emojis/bold markdown
-                const match = line.match(/^\d+\.\s*(?:[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])?\s*\*\*?([^\*]+)\*\*?/);
-                if (match && match[1]) {
-                    translationWords.push(match[1].trim());
-                }
-            }
-            if (translationWords.length > 0) {
-                textToRead = translationWords.join(', ');
-            } else {
-                const nonEmptyLines = lines.filter(l => l.trim() && !l.startsWith('**Detected Language'));
-                if (nonEmptyLines.length > 1) {
-                    textToRead = nonEmptyLines.slice(1).join('. ').replace(/\*/g, '');
-                }
-            }
-        } else {
-            const lines = translatedText.split('\n');
-            const translationLines = lines.filter(l => !l.startsWith('**Detected Language'));
-            textToRead = translationLines.join('\n').replace(/\*/g, '').trim();
-        }
-
-        const utterance = new SpeechSynthesisUtterance(textToRead);
-        const freshVoices = window.speechSynthesis.getVoices();
-
-        const matchingVoices = freshVoices.filter(v =>
-            v.lang === targetLang ||
-            v.lang.replace('_', '-').startsWith(targetLang + '-')
-        );
-
-        const selectedVoice = matchingVoices.find(v =>
-            v.name.includes('Google') || v.name.includes('Microsoft')
-        ) || matchingVoices[0] || null;
-
-        if (selectedVoice) {
-            utterance.voice = selectedVoice;
-            utterance.lang = selectedVoice.lang;
-        } else {
-            utterance.lang = targetLang;
-        }
-
-        utterance.onend = () => setIsSpeakingTarget(false);
-        utterance.onerror = () => setIsSpeakingTarget(false);
-
         setIsSpeakingTarget(true);
-        window.speechSynthesis.speak(utterance);
+        speak(targetSpeechText, targetLang, () => setIsSpeakingTarget(false));
     };
 
     return {

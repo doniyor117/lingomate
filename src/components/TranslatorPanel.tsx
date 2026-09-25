@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { TranslationEntry, TranslationMode } from '@/lib/types';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useSpeech } from '@/hooks/useSpeech';
+import { getDetectedLanguage, toSpeechText, toSwapText } from '@/lib/results';
 import { SourcePanel } from './SourcePanel';
 import { TargetPanel } from './TargetPanel';
 import { LanguageSelect } from './LanguageSelect';
@@ -12,7 +13,8 @@ import { FallbackToast } from './FallbackToast';
 interface TranslatorPanelProps {
     /** Entry restored from history; the parent remounts the panel (via key) when it changes. */
     initialEntry: TranslationEntry | null;
-    translationMode: TranslationMode;
+    mode: TranslationMode;
+    onModeChange: (mode: TranslationMode) => void;
     model: string;
     sourceLang: string;
     targetLang: string;
@@ -22,7 +24,8 @@ interface TranslatorPanelProps {
 
 export function TranslatorPanel({
     initialEntry,
-    translationMode,
+    mode,
+    onModeChange,
     model,
     sourceLang,
     targetLang,
@@ -35,25 +38,25 @@ export function TranslatorPanel({
     const {
         sourceText,
         setSourceText,
-        translatedText,
-        setTranslatedText,
+        result,
+        isBusy,
         isLoading,
-        isStreaming,
         error,
-        setError,
-        outputMode,
         handleTranslate,
         cancelTranslation,
+        clearResult,
         fallbackNotice,
         dismissFallbackNotice
     } = useTranslation({
         sourceLang,
         targetLang,
         context,
-        translationMode,
+        mode,
         model,
         initialEntry
     });
+
+    const detectedLanguage = getDetectedLanguage(result);
 
     const {
         isListening,
@@ -64,32 +67,26 @@ export function TranslatorPanel({
         handleSpeakTarget
     } = useSpeech({
         sourceLang,
+        sourceSpeechLang: sourceLang !== 'auto' ? sourceLang : detectedLanguage ?? 'en',
         targetLang,
         setSourceText,
-        translatedText,
-        outputMode
+        targetSpeechText: result ? toSpeechText(result) : '',
     });
 
     const handleSwapLanguages = () => {
-        if (sourceLang === 'auto') {
-            onSourceLangChange(targetLang);
-            onTargetLangChange('en');
-        } else {
-            const temp = sourceLang;
-            onSourceLangChange(targetLang);
-            onTargetLangChange(temp);
-        }
+        // With auto-detect, the detected language becomes the new target.
+        const newTarget = sourceLang === 'auto' ? detectedLanguage ?? 'en' : sourceLang;
+        onSourceLangChange(targetLang);
+        onTargetLangChange(newTarget);
         cancelTranslation();
-        setSourceText(translatedText.replace(/\*/g, '').replace(/\[.*?\]/g, '').trim());
-        setTranslatedText('');
-        setError('');
+        if (result) setSourceText(toSwapText(result));
+        clearResult();
     };
 
     const handleClear = () => {
         cancelTranslation();
         setSourceText('');
-        setTranslatedText('');
-        setError('');
+        clearResult();
     };
 
     return (
@@ -110,8 +107,11 @@ export function TranslatorPanel({
                     setContext={setContext}
                     showContext={showContext}
                     setShowContext={setShowContext}
+                    mode={mode}
+                    onModeChange={onModeChange}
                     handleTranslate={handleTranslate}
-                    isLoading={isLoading || isStreaming}
+                    onCancel={cancelTranslation}
+                    isBusy={isBusy}
                     isListening={isListening}
                     toggleListening={toggleListening}
                     isSpeakingSource={isSpeakingSource}
@@ -120,10 +120,11 @@ export function TranslatorPanel({
                 />
 
                 <TargetPanel
-                    translatedText={translatedText}
+                    result={result}
+                    detectedLanguage={sourceLang === 'auto' ? detectedLanguage : undefined}
                     error={error}
                     isLoading={isLoading}
-                    outputMode={translatedText || isLoading ? outputMode : translationMode}
+                    isStreaming={isBusy && !isLoading}
                     isSpeakingTarget={isSpeakingTarget}
                     handleSpeakTarget={handleSpeakTarget}
                 />

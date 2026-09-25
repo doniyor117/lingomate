@@ -1,64 +1,83 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
+import { TranslationResult } from '@/lib/types';
+import { getLanguageByCode } from '@/lib/languages';
+import { hasContent, toCopyText } from '@/lib/results';
+import { DictionaryView, FindView } from './ResultViews';
 
-// The markdown parser is ~60KB gzipped and only needed once a translation exists,
-// so keep it out of the initial bundle and fetch it when the browser is idle.
-const loadMarkdown = () => import('./TranslationMarkdown');
-const TranslationMarkdown = dynamic(loadMarkdown, {
-    ssr: false,
-    loading: () => null,
-});
+// Only history entries saved by older versions are markdown; load the parser on demand.
+const LegacyMarkdown = dynamic(() => import('./TranslationMarkdown'), { ssr: false, loading: () => null });
 
 interface TargetPanelProps {
-    translatedText: string;
+    result: TranslationResult | null;
+    /** ISO code shown as "Detected …" when the source language is auto. */
+    detectedLanguage?: string;
     error: string;
     isLoading: boolean;
-    outputMode: string;
+    isStreaming: boolean;
     isSpeakingTarget: boolean;
     handleSpeakTarget: () => void;
 }
 
+function DetectedLanguage({ code }: { code: string }) {
+    const lang = getLanguageByCode(code);
+    return (
+        <p className="mb-3 text-xs text-[var(--text-muted)]">
+            Detected: <span className="font-medium text-[var(--foreground)]">{lang ? `${lang.name} ${lang.flag}` : code.toUpperCase()}</span>
+        </p>
+    );
+}
+
+function ResultBody({ result, isStreaming }: { result: TranslationResult; isStreaming: boolean }) {
+    switch (result.mode) {
+        case 'dictionary':
+            return <DictionaryView data={result.data} />;
+        case 'find':
+            return <FindView data={result.data} />;
+        case 'legacy':
+            return <div className="markdown-body"><LegacyMarkdown text={result.text} /></div>;
+        case 'translate':
+            return (
+                <p className="whitespace-pre-wrap break-words text-lg leading-relaxed text-[var(--foreground)]">
+                    {result.text}
+                    {isStreaming && <span className="inline-block w-2 h-5 ml-0.5 align-text-bottom rounded-sm bg-[var(--primary)] animate-pulse" aria-hidden="true" />}
+                </p>
+            );
+    }
+}
+
 export function TargetPanel({
-    translatedText,
+    result,
+    detectedLanguage,
     error,
     isLoading,
-    outputMode,
+    isStreaming,
     isSpeakingTarget,
     handleSpeakTarget
 }: TargetPanelProps) {
     const [copied, setCopied] = useState(false);
-
-    useEffect(() => {
-        const preload = () => { loadMarkdown(); };
-        if ('requestIdleCallback' in window) {
-            const id = window.requestIdleCallback(preload);
-            return () => window.cancelIdleCallback(id);
-        }
-        const id = setTimeout(preload, 1500);
-        return () => clearTimeout(id);
-    }, []);
+    const showResult = !error && !isLoading && hasContent(result);
 
     const handleCopy = async () => {
-        if (!translatedText) return;
+        if (!result) return;
+        const text = toCopyText(result);
         try {
-            await navigator.clipboard.writeText(translatedText);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
+            await navigator.clipboard.writeText(text);
         } catch {
             const textarea = document.createElement('textarea');
-            textarea.value = translatedText;
+            textarea.value = text;
             document.body.appendChild(textarea);
             textarea.select();
             document.execCommand('copy');
             document.body.removeChild(textarea);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
         }
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
     };
 
     return (
         <div className="flex flex-col rounded-xl border border-[var(--border)] glass overflow-hidden min-h-[200px] lg:min-h-0 bg-[var(--surface)]">
-            <div className="flex-1 relative p-4 overflow-y-auto">
+            <div className="flex-1 relative p-4 overflow-y-auto" aria-live="polite">
                 {error ? (
                     <div className="flex items-start gap-3 text-red-500">
                         <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -72,70 +91,52 @@ export function TargetPanel({
                         <div className="h-4 bg-[var(--border)] rounded w-1/2" />
                         <div className="h-4 bg-[var(--border)] rounded w-5/6" />
                     </div>
-                ) : translatedText ? (
-                    <div className="markdown-body relative">
-                        <div className="float-right ml-3 mb-2 relative z-10">
-                            <button
-                                onClick={handleCopy}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-full transition-all border shadow-sm bg-[var(--background)]/85 backdrop-blur-sm ${
-                                    copied
-                                        ? 'text-green-600 border-green-500/20 font-medium'
-                                        : 'text-[var(--foreground)] border-[var(--border)] hover:bg-[var(--surface-hover)]'
-                                }`}
-                                title="Copy"
-                            >
-                                {copied ? (
-                                    <>
-                                        <svg className="w-3.5 h-3.5 text-green-600 animate-scale-in" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                        </svg>
-                                        <span>Copied!</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                        </svg>
-                                        <span>Copy</span>
-                                    </>
-                                )}
-                            </button>
-                        </div>
-                        <TranslationMarkdown text={translatedText} />
-                    </div>
+                ) : showResult && result ? (
+                    <>
+                        {detectedLanguage && <DetectedLanguage code={detectedLanguage} />}
+                        <ResultBody result={result} isStreaming={isStreaming} />
+                    </>
                 ) : (
                     <p className="text-[var(--text-muted)] italic">Translation will appear here...</p>
                 )}
             </div>
 
-            <div className="flex flex-row items-center justify-start gap-4 sm:gap-6 px-4 py-3 border-t border-[var(--border)] bg-[var(--surface-hover)] w-full overflow-x-auto whitespace-nowrap">
-                <div className="flex items-center gap-3 text-xs tracking-wide text-[var(--text-muted)]">
-                    {outputMode && (
-                        <span className="px-2.5 py-1 rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] font-semibold uppercase text-[10px] tracking-wider shadow-sm">
-                            {outputMode}
-                        </span>
-                    )}
-                </div>
-
-                {translatedText && (
-                    <div className="flex items-center gap-2">
-                        {/* Speaker Button */}
-                        <button
-                            onClick={handleSpeakTarget}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors ${isSpeakingTarget
-                                ? 'text-[var(--primary)] bg-[var(--border)] font-medium'
-                                : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--border)]'
-                                }`}
-                            title="Listen"
-                        >
+            {showResult && !isStreaming && (
+                <div className="flex items-center gap-2 px-3 py-2 border-t border-[var(--border)] bg-[var(--surface-hover)]">
+                    <button
+                        onClick={handleSpeakTarget}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors ${isSpeakingTarget
+                            ? 'text-[var(--primary)] bg-[var(--border)] font-medium'
+                            : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--border)]'
+                            }`}
+                        title="Listen"
+                    >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                        </svg>
+                        {isSpeakingTarget ? 'Playing…' : 'Listen'}
+                    </button>
+                    <button
+                        onClick={handleCopy}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors ${copied
+                            ? 'text-green-600 font-medium'
+                            : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--border)]'
+                            }`}
+                        title="Copy"
+                    >
+                        {copied ? (
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                             </svg>
-                            {isSpeakingTarget ? 'Playing...' : 'Listen'}
-                        </button>
-                    </div>
-                )}
-            </div>
+                        ) : (
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                        )}
+                        {copied ? 'Copied' : 'Copy'}
+                    </button>
+                </div>
+            )}
         </div>
     );
 }

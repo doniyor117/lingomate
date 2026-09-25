@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { TranslationEntry, useHistory, deleteHistoryEntry, clearHistory, formatTimestamp } from '@/lib/history';
+import { entryToResult, toPreview } from '@/lib/results';
 import { getLanguageByCode } from '@/lib/languages';
 
 interface HistorySidebarProps {
@@ -144,7 +145,7 @@ export function HistorySidebar({ isOpen, onClose, onSelect }: HistorySidebarProp
                                                 <span className="ml-auto">{formatTimestamp(entry.timestamp)}</span>
                                             </div>
                                             <p className="text-sm font-medium truncate mb-1">{entry.sourceText}</p>
-                                            <p className="text-sm text-[var(--text-muted)] truncate">{entry.translatedText.substring(0, 80)}</p>
+                                            <p className="text-sm text-[var(--text-muted)] truncate">{toPreview(entryToResult(entry))}</p>
                                         </div>
                                         <button
                                             onClick={(e) => handleDelete(entry.id, e)}

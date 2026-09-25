@@ -80,13 +80,14 @@ export default function Home() {
                 <TranslatorPanel
                     key={restoredEntry?.id ?? 'new'}
                     initialEntry={restoredEntry}
-                    translationMode={prefs.mode}
+                    mode={prefs.mode}
+                    onModeChange={prefs.setMode}
                     model={prefs.model}
                     sourceLang={prefs.sourceLang}
                     targetLang={prefs.targetLang}
                     onSourceLangChange={prefs.setSourceLang}
                     onTargetLangChange={prefs.setTargetLang}
-                    />
+                />
             </div>
 
             {/* History Sidebar */}
@@ -100,9 +101,7 @@ export default function Home() {
                 isOpen={settingsOpen}
                 onClose={() => setSettingsOpen(false)}
                 model={prefs.model}
-                translationMode={prefs.mode}
                 onModelChange={prefs.setModel}
-                onModeChange={prefs.setMode}
             />
 
             <footer className="px-4 py-4 text-center text-xs text-[var(--text-muted)] tracking-wide bg-gradient-to-t from-[var(--background)] to-transparent pointer-events-none">

@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { translateStream } from '@/lib/translate-service';
 import { MAX_CHARS } from '@/lib/constants';
 
-const MODES = ['meaning', 'direct', 'reverse'];
+const MODES = ['dictionary', 'translate', 'find'];
+const MAX_CONTEXT_CHARS = 500;
 
 export async function POST(request: NextRequest) {
     try {
@@ -25,9 +26,16 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Target language is required' }, { status: 400 });
         }
 
-        if (mode && !MODES.includes(mode)) {
+        if (context !== undefined && (typeof context !== 'string' || context.length > MAX_CONTEXT_CHARS)) {
             return NextResponse.json(
-                { error: 'Invalid mode. Must be meaning, direct, or reverse' },
+                { error: `Context must be at most ${MAX_CONTEXT_CHARS} characters` },
+                { status: 400 }
+            );
+        }
+
+        if (!MODES.includes(mode)) {
+            return NextResponse.json(
+                { error: 'Invalid mode. Must be dictionary, translate, or find' },
                 { status: 400 }
             );
         }

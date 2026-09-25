@@ -13,11 +13,12 @@
 
 ![Alt Text](public/lumenai_interface.png)
 
-### 🧠 3 Intelligent Translation Modes
-LumenAI doesn't just do 1-to-1 translation. Choose the mode that fits your exact need:
-*   **📚 Meaning (Dictionary) Mode**: Perfect for single words or short phrases. Provides rich dictionary-style definitions, parts of speech, synonyms, pronunciation guides, and visual emojis to help you grasp the true nuance.
-*   **⚡ Direct Mode**: Fast, pure, native-sounding translation. Ideal for sentences, paragraphs, or when you just need the text translated accurately without extra fluff.
-*   **🔍 Reverse Lookup**: Forgot a word? Describe it! Type "a place where you borrow books" and LumenAI will instantly find the target word for you (e.g., "Library") in your chosen language.
+### 🧠 Translation Modes
+Pick a mode right next to the input (or leave it on **Auto**):
+*   **✨ Auto**: Dictionary for up to 5 words, Translate for anything longer.
+*   **📚 Dictionary**: For words and short phrases. Pronunciation, every common meaning with its part of speech, a usage note and an example sentence with translation. Genuine slang, Gen Z and internet meanings (e.g. "cope", "mid") are included and tagged, but only when the word really has them.
+*   **🌐 Translate**: Natural, native-sounding translation of sentences and longer text, streamed in as it's generated.
+*   **🔍 Find a word**: Forgot a word? Describe it ("a place where you borrow books") and get the best matching words in your target language.
 
 ### ⚡ Fast, Streaming AI Engine
 Powered by Google's low-latency **Gemini Flash-Lite** models. Translations stream in word by word as they're generated.
@@ -28,7 +29,7 @@ Powered by Google's low-latency **Gemini Flash-Lite** models. Translations strea
 *   **Speech-to-Text (STT)**: Speak directly into the app using native browser speech recognition.
 *   **Smart Text-to-Speech (TTS)**:
     *   **Native Accent Force**: Automatically detects and forces the *correct* regional voice (e.g., French voice for French text) to ensure perfect pronunciation.
-    *   **Intelligent Reading**: In Meaning or Reverse mode, the AI smartly reads *only* the translated words/headwords, skipping the grammar metadata and markdown formatting.
+    *   **Intelligent Reading**: In Dictionary and Find a word modes, only the translated words are read aloud.
     *   **Voice Quality**: Prioritizes high-quality Google/Microsoft neural voices if available on your device.
 
 ### 🎯 Precision Logic

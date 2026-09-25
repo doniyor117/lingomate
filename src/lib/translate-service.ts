@@ -1,5 +1,5 @@
 import { getModelOrder } from './models';
-import { buildMeaningPrompt, buildDirectPrompt, buildReverseLookupPrompt, PromptResult } from './prompts';
+import { buildPrompt, PromptResult } from './prompts';
 import { OutputMode, TranslateRequest } from './types';
 
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
@@ -12,18 +12,6 @@ const TOTAL_TIMEOUT_MS = 60000;
 export interface TranslationStream {
     model: string;
     stream: ReadableStream<Uint8Array>;
-}
-
-function buildPrompt(request: TranslateRequest): PromptResult {
-    const params = {
-        text: request.text,
-        sourceLang: request.sourceLang,
-        targetLang: request.targetLang,
-        context: request.context,
-    };
-    if (request.mode === 'reverse') return buildReverseLookupPrompt(params);
-    if (request.mode === 'direct') return buildDirectPrompt(params);
-    return buildMeaningPrompt(params);
 }
 
 /**
@@ -86,6 +74,10 @@ async function openModelStream(model: string, prompt: PromptResult, apiKey: stri
                     maxOutputTokens: 2000,
                     // Translation needs no reasoning; minimal thinking keeps time-to-first-token low.
                     thinkingConfig: { thinkingLevel: 'minimal' },
+                    ...(prompt.schema && {
+                        responseMimeType: 'application/json',
+                        responseJsonSchema: prompt.schema,
+                    }),
                 },
             }),
         });
@@ -138,7 +130,7 @@ async function openModelStream(model: string, prompt: PromptResult, apiKey: stri
  */
 export async function translateStream(request: TranslateRequest, apiKey: string): Promise<TranslationStream & { mode: OutputMode }> {
     const prompt = buildPrompt(request);
-    const mode: OutputMode = request.mode || 'meaning';
+    const mode: OutputMode = request.mode;
     let lastError: Error | null = null;
 
     for (const model of getModelOrder(request.model)) {

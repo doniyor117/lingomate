@@ -1,14 +1,16 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { saveTranslation } from '@/lib/history';
-import { OutputMode, TranslationEntry, TranslationMode } from '@/lib/types';
+import { TranslationEntry, TranslationMode, TranslationResult } from '@/lib/types';
 import { resolveModel } from '@/lib/models';
+import { resolveMode } from '@/lib/modes';
+import { entryToResult, hasContent, parseOutput, parseTranslateOutput, serializeResult } from '@/lib/results';
 import { FallbackNotice, pickModel, recordModelResult } from '@/lib/model-fallback';
 
 interface UseTranslationParams {
     sourceLang: string;
     targetLang: string;
     context: string;
-    translationMode: TranslationMode;
+    mode: TranslationMode;
     model: string;
     initialEntry?: TranslationEntry | null;
 }
@@ -17,41 +19,43 @@ export function useTranslation({
     sourceLang,
     targetLang,
     context,
-    translationMode,
+    mode,
     model,
     initialEntry
 }: UseTranslationParams) {
     const [sourceText, setSourceText] = useState(initialEntry?.sourceText ?? '');
-    const [translatedText, setTranslatedText] = useState(initialEntry?.translatedText ?? '');
+    const [result, setResult] = useState<TranslationResult | null>(() => initialEntry ? entryToResult(initialEntry) : null);
     const [isBusy, setIsBusy] = useState(false);
     const [error, setError] = useState('');
-    const [outputMode, setOutputMode] = useState<OutputMode>(translationMode);
     const [fallbackNotice, setFallbackNotice] = useState<FallbackNotice | null>(null);
     const abortRef = useRef<AbortController | null>(null);
 
     const cancelTranslation = useCallback(() => {
         abortRef.current?.abort();
         abortRef.current = null;
+        setIsBusy(false);
     }, []);
 
-    useEffect(() => cancelTranslation, [cancelTranslation]);
+    useEffect(() => () => abortRef.current?.abort(), []);
 
     const handleTranslate = useCallback(async () => {
         const text = sourceText.trim();
         if (!text) return;
 
         // A new request supersedes whatever is still streaming.
-        cancelTranslation();
+        abortRef.current?.abort();
         const controller = new AbortController();
         abortRef.current = controller;
 
-        setIsBusy(true);
-        setError('');
-        setTranslatedText('');
-        setOutputMode(translationMode);
-
+        const outputMode = resolveMode(mode, text);
+        const expectLangTag = sourceLang === 'auto';
         const preferred = resolveModel(model);
         const requested = pickModel(preferred);
+        const trimmedContext = context.trim() || undefined;
+
+        setIsBusy(true);
+        setError('');
+        setResult(null);
 
         try {
             const response = await fetch('/api/translate', {
@@ -62,9 +66,9 @@ export function useTranslation({
                     text,
                     sourceLang,
                     targetLang,
-                    context: context.trim() || undefined,
-                    mode: translationMode,
-                    model: requested
+                    context: trimmedContext,
+                    mode: outputMode,
+                    model: requested,
                 }),
             });
 
@@ -81,22 +85,30 @@ export function useTranslation({
 
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
-            let result = '';
+            let raw = '';
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
-                result += decoder.decode(value, { stream: true });
-                setTranslatedText(result);
+                raw += decoder.decode(value, { stream: true });
+                // Plain translations stream in; structured results appear once complete.
+                if (outputMode === 'translate') setResult(parseTranslateOutput(raw, expectLangTag));
             }
-            result += decoder.decode();
-            setTranslatedText(result);
+            raw += decoder.decode();
+
+            let final: TranslationResult;
+            try {
+                final = parseOutput(outputMode, raw, expectLangTag);
+            } catch {
+                throw new Error('Couldn’t read the response. Please try again.');
+            }
+            setResult(final);
 
             saveTranslation({
                 sourceText: text,
-                translatedText: result,
+                ...serializeResult(final),
                 sourceLang,
                 targetLang,
-                context: context.trim() || undefined,
+                context: trimmedContext,
             });
         } catch (err) {
             if (controller.signal.aborted) return;
@@ -107,30 +119,28 @@ export function useTranslation({
                 setIsBusy(false);
             }
         }
-    }, [
-        sourceText, sourceLang, targetLang, context,
-        translationMode, model, cancelTranslation
-    ]);
+    }, [sourceText, sourceLang, targetLang, context, mode, model]);
 
     const dismissFallbackNotice = useCallback(() => setFallbackNotice(null), []);
 
-    // Skeleton until the first chunk lands, then the text streams in.
-    const isLoading = isBusy && !translatedText;
-    const isStreaming = isBusy && !!translatedText;
+    const clearResult = useCallback(() => {
+        setResult(null);
+        setError('');
+    }, []);
+
+    // Skeleton until something can be shown, then (for translations) the text streams in.
+    const isLoading = isBusy && !hasContent(result);
 
     return {
         sourceText,
         setSourceText,
-        translatedText,
-        setTranslatedText,
+        result,
+        isBusy,
         isLoading,
-        isStreaming,
         error,
-        setError,
-        outputMode,
-        setOutputMode,
         handleTranslate,
         cancelTranslation,
+        clearResult,
         fallbackNotice,
         dismissFallbackNotice
     };

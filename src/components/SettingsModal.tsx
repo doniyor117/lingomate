@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { AUTO_MODEL, MODELS } from '@/lib/models';
-import { TranslationMode } from '@/lib/types';
 import { ThemeToggle } from './ThemeToggle';
 import { ModelSelect } from './ModelSelect';
 import { APP_VERSION } from '@/lib/version';
@@ -9,18 +8,14 @@ interface SettingsModalProps {
     isOpen: boolean;
     onClose: () => void;
     model: string;
-    translationMode: TranslationMode;
     onModelChange: (val: string) => void;
-    onModeChange: (mode: TranslationMode) => void;
 }
 
 export function SettingsModal({
     isOpen,
     onClose,
     model,
-    translationMode,
     onModelChange,
-    onModeChange,
 }: SettingsModalProps) {
     useEffect(() => {
         if (isOpen) {
@@ -62,61 +57,26 @@ export function SettingsModal({
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-5 space-y-6">
-                    {/* Appearance */}
-                    <div className="space-y-4">
-                        <h3 className="text-sm font-medium text-[var(--text-muted)] uppercase tracking-wider">Appearance</h3>
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <label className="text-sm font-medium text-[var(--foreground)]">Theme</label>
-                                <p className="text-xs text-[var(--text-muted)]">Toggle between light and dark mode</p>
-                            </div>
-                            <ThemeToggle />
+                <div className="flex-1 overflow-y-auto p-5 space-y-5">
+                    <div className="flex items-center justify-between gap-4">
+                        <div>
+                            <label className="text-sm font-medium text-[var(--foreground)]">Theme</label>
+                            <p className="text-xs text-[var(--text-muted)]">Light, dark or match your device</p>
                         </div>
-
-                        <div className="pt-4 border-t border-[var(--border)] space-y-3">
-                            <div>
-                                <label className="text-sm font-medium text-[var(--foreground)]">Translation Mode</label>
-                                <p className="text-xs text-[var(--text-muted)]">Select how LumenAI processes your text</p>
-                            </div>
-                            <div className="flex bg-[var(--surface-hover)] rounded-lg p-1 border border-[var(--border)]">
-                                <button
-                                    onClick={() => onModeChange('meaning')}
-                                    className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all ${translationMode === 'meaning' ? 'bg-[var(--surface)] text-[var(--primary)] shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--foreground)]'}`}
-                                >
-                                    Meaning
-                                </button>
-                                <button
-                                    onClick={() => onModeChange('direct')}
-                                    className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all ${translationMode === 'direct' ? 'bg-[var(--surface)] text-[var(--primary)] shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--foreground)]'}`}
-                                >
-                                    Direct
-                                </button>
-                                <button
-                                    onClick={() => onModeChange('reverse')}
-                                    className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all ${translationMode === 'reverse' ? 'bg-[var(--surface)] text-[var(--primary)] shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--foreground)]'}`}
-                                >
-                                    Reverse
-                                </button>
-                            </div>
-                        </div>
+                        <ThemeToggle />
                     </div>
 
-                    <div className="space-y-4">
-                        <h3 className="text-sm font-medium text-[var(--text-muted)] uppercase tracking-wider">Model Selection</h3>
-                        
-                        <div className="space-y-1.5 relative z-30">
-                            <label className="text-sm font-medium text-[var(--foreground)] block">Model</label>
-                            <p className="text-xs text-[var(--text-muted)] mb-2">Used for all translation modes. If it fails, LumenAI switches to the other model for 15 minutes.</p>
-                            <ModelSelect
-                                value={model}
-                                onChange={onModelChange}
-                                options={modelOptions}
-                            />
-                        </div>
+                    <div className="pt-5 border-t border-[var(--border)] space-y-1.5">
+                        <label className="text-sm font-medium text-[var(--foreground)] block">Model</label>
+                        <p className="text-xs text-[var(--text-muted)] mb-2">Used for all modes. If it fails, LumenAI switches to the other model for 15 minutes.</p>
+                        <ModelSelect
+                            value={model}
+                            onChange={onModelChange}
+                            options={modelOptions}
+                        />
                     </div>
                 </div>
-                
+
                 <div className="p-4 border-t border-[var(--border)] bg-[var(--surface-hover)] flex items-center justify-between gap-4">
                     <span className="text-xs text-[var(--text-muted)] font-mono">v{APP_VERSION}</span>
                     <button

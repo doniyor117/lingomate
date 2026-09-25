@@ -1,129 +1,156 @@
 import { getLanguageByCode } from './languages';
-
-export interface PromptParams {
-    text: string;
-    sourceLang: string;
-    targetLang: string;
-    context?: string;
-}
+import { OutputMode, TranslateRequest } from './types';
 
 export interface PromptResult {
     systemInstruction: string;
     userPrompt: string;
+    /** JSON schema for structured modes; translate mode streams plain text. */
+    schema?: object;
 }
 
-export function buildMeaningPrompt({ text, sourceLang, targetLang, context }: PromptParams): PromptResult {
-    const target = getLanguageByCode(targetLang);
-    const targetName = target ? target.name : targetLang;
-    const targetFlag = target ? target.flag : '🌐';
-    
-    const source = getLanguageByCode(sourceLang);
-    const sourceName = source ? source.name : sourceLang;
-    const isAuto = sourceLang === 'auto';
+/** Prefix the translate prompt asks for when the source language is auto-detected. */
+export const LANG_TAG_EXAMPLE = '[[lang:en]]';
 
-    const systemInstruction = `You are an expert linguist translator. Translate a word/phrase to ${targetName}.
+const REGISTERS = ['standard', 'formal', 'informal', 'slang', 'internet', 'vulgar'];
 
-FORMAT YOUR RESPONSE EXACTLY LIKE THIS (use markdown for bolding and lists):
-${isAuto ? '\n**Detected Language:** [Full Language Name] [flag emoji]' : ''}
+const REGISTER_RULES = `- register: "standard" for ordinary usage; "formal" or "informal" where that matters; "slang" or "internet" for real slang, Gen Z or internet usage (e.g. English "cope", "based", "mid", "ghost"); "vulgar" for offensive usage.
+- Include slang, Gen Z or internet meanings only when the word genuinely has them in current use. Never invent or force a slang sense. A minor slang use can go in the note instead of its own sense.`;
 
-**[Corrected Word if typo, or Original Word]** [pronunciation]
-
-1. [visual emoji] **[Translation in ${targetName}]** [*part of speech like noun, verb, adj., etc.*]
-   [One line explanation in ${targetName} about when/how to use this meaning]
-   *Example:* [A short example sentence in detected language using the original word]
-
-2. [visual emoji] **[Alternative Translation]** [*part of speech*]
-   [One line explanation in ${targetName}]
-   *Example:* [Example sentence in detected language]
-
-(continue numbering if more meanings exist)
-
-📝 **Note:** [Any special tips, cultural notes, or grammar tips - write in ${targetName}]
-
-IMPORTANT RULES:
-${!isAuto ? `- CRITICAL: The user has EXPLICITLY set the source language to ${sourceName}. You MUST interpret the input as ${sourceName}, even if it looks like another language (e.g. 'Gift' in German = Poison, not Present).` : `- CRITICAL: Identify the language of the input text accurately and write it in the 'Detected Language' line.`}
-- Use visual emojis that represent the meaning (🏦 for bank/money, 🌊 for river bank, 👋 for hello, 📚 for book, etc.)
-- Put pronunciation in [brackets] right after the word
-- Write ALL explanations in ${targetName} language! EXAMPLE LANG IS IN THE LANG OF THE WORD SEARCHED
-- If the input has typos like "helo" or "bitte", correct it and show the proper spelling
-- Include articles if important (der/die/das for German, etc.) and note them in the note section
-- Be concise but informative
-- DO NOT echo these rules back to the user. DO NOT output internal thoughts. Output ONLY the final requested format.`;
-
-    const userPrompt = `${context ? `User context: ${context}\n` : ''}Word to translate: "${text}"
-Target language: ${targetName} ${targetFlag}`;
-
-    return { systemInstruction, userPrompt };
+function languageName(code: string): string {
+    return getLanguageByCode(code)?.name ?? code;
 }
 
-export function buildDirectPrompt({ text, sourceLang, targetLang, context }: PromptParams): PromptResult {
-    const target = getLanguageByCode(targetLang);
-    const targetName = target ? target.name : targetLang;
-    const targetFlag = target ? target.flag : '🌐';
-    
-    const source = getLanguageByCode(sourceLang);
-    const sourceName = source ? source.name : sourceLang;
-    const isAuto = sourceLang === 'auto';
-
-    const systemInstruction = `You are an expert translator. Translate text to ${targetName}.
-
-FORMAT YOUR RESPONSE EXACTLY LIKE THIS:
-${isAuto ? '\n**Detected Language:** [Language Name] [flag emoji]' : ''}
-
-[Your accurate, natural translation in ${targetName}]
-
-RULES:
-${!isAuto ? `- CRITICAL: The user has EXPLICITLY set the source language to ${sourceName}. Treat the input as ${sourceName}, even if it looks like another language.` : `- CRITICAL: Identify the language of the input text accurately and write it in the 'Detected Language' line.`}
-- Provide ONLY the translation${isAuto ? ' after the detected language line' : ''}
-- Use natural, native-sounding ${targetName}
-- Preserve the original meaning, tone, and style
-- NO explanations, NO alternatives, NO notes
-- Just the clean translation
-- DO NOT echo the prompt, DO NOT output internal thoughts, DO NOT wrap the output in any extra tags. Provide the final text immediately.`;
-
-    const userPrompt = `${context ? `Context: ${context}\n` : ''}Text to translate: "${text}"
-Target language: ${targetName} ${targetFlag}`;
-
-    return { systemInstruction, userPrompt };
+function sourceRule(sourceLang: string, subject: string): string {
+    if (sourceLang === 'auto') return '';
+    const name = languageName(sourceLang);
+    return `- The user set the source language to ${name}. Treat the ${subject} as ${name} even if it looks like another language (e.g. German "Gift" means poison, not present).\n`;
 }
 
-export function buildReverseLookupPrompt({ text, sourceLang, targetLang, context }: PromptParams): PromptResult {
-    const target = getLanguageByCode(targetLang);
-    const targetName = target ? target.name : targetLang;
-    
-    const source = getLanguageByCode(sourceLang);
-    const sourceName = source ? source.name : sourceLang;
+function contextRule(context?: string): string {
+    return context ? `- The user added this context; follow it: "${context}"\n` : '';
+}
+
+function dictionaryPrompt({ text, sourceLang, targetLang, context }: TranslateRequest): PromptResult {
+    const target = languageName(targetLang);
+
+    const systemInstruction = `You are a bilingual dictionary. Look up the user's word or short phrase and explain it for a ${target} speaker. Reply with JSON matching the schema.
+
+- detectedLanguage: ISO 639-1 code of the input's language.
+${sourceRule(sourceLang, 'input')}- headword: the input with any typo corrected (unchanged if already correct). Add the article or gender for nouns in languages that have them (der/die/das, el/la, le/la).
+- pronunciation: IPA for the headword, in slashes.
+- senses: the distinct meanings, most common first (usually 1-5). If the input is an idiom or phrase, explain the phrase as a whole. For each sense:
+  - translation: the ${target} equivalent
+  - partOfSpeech: short, written in ${target}
+  - explanation: one short sentence in ${target} about when or how it's used
+  - example: a short natural sentence in the input's language using the headword in this sense
+  - exampleTranslation: that example in ${target}
+  - emoji: one emoji that pictures this sense
+${REGISTER_RULES}
+- note: one short, genuinely useful tip in ${target} (grammar, false friends, cultural nuance, slang usage), or "" if there is nothing worth adding.
+${contextRule(context)}`;
+
+    const sense = {
+        type: 'object',
+        properties: {
+            emoji: { type: 'string' },
+            translation: { type: 'string' },
+            partOfSpeech: { type: 'string' },
+            register: { type: 'string', enum: REGISTERS },
+            explanation: { type: 'string' },
+            example: { type: 'string' },
+            exampleTranslation: { type: 'string' },
+        },
+        required: ['emoji', 'translation', 'partOfSpeech', 'register', 'explanation', 'example', 'exampleTranslation'],
+        propertyOrdering: ['emoji', 'translation', 'partOfSpeech', 'register', 'explanation', 'example', 'exampleTranslation'],
+    };
+
+    return {
+        systemInstruction,
+        userPrompt: text,
+        schema: {
+            type: 'object',
+            properties: {
+                detectedLanguage: { type: 'string' },
+                headword: { type: 'string' },
+                pronunciation: { type: 'string' },
+                senses: { type: 'array', items: sense, minItems: 1, maxItems: 6 },
+                note: { type: 'string' },
+            },
+            required: ['detectedLanguage', 'headword', 'pronunciation', 'senses', 'note'],
+            propertyOrdering: ['detectedLanguage', 'headword', 'pronunciation', 'senses', 'note'],
+        },
+    };
+}
+
+function findPrompt({ text, sourceLang, targetLang, context }: TranslateRequest): PromptResult {
+    const target = languageName(targetLang);
+    const descriptionLanguage = sourceLang === 'auto'
+        ? 'the same language the description is written in'
+        : languageName(sourceLang);
+
+    const systemInstruction = `You help people find a word they can't remember. The user describes a word or concept; suggest the ${target} words that best match it. Reply with JSON matching the schema.
+
+- detectedLanguage: ISO 639-1 code of the language the description is written in.
+${sourceRule(sourceLang, 'description')}- candidates: 1-5 words, best match first. For each:
+  - word: the ${target} word or expression, with its article or gender if ${target} uses them
+  - partOfSpeech: short, written in ${descriptionLanguage}
+  - meaning: its literal or core meaning, written in ${descriptionLanguage}
+  - whyItFits: one short sentence in ${descriptionLanguage} on why it matches the description
+  - example: a short natural sentence in ${target} using the word
+${REGISTER_RULES}
+- note: nuances or common mistakes when choosing between these words, in ${descriptionLanguage}, or "" if nothing is worth adding.
+${contextRule(context)}`;
+
+    const candidate = {
+        type: 'object',
+        properties: {
+            word: { type: 'string' },
+            partOfSpeech: { type: 'string' },
+            register: { type: 'string', enum: REGISTERS },
+            meaning: { type: 'string' },
+            whyItFits: { type: 'string' },
+            example: { type: 'string' },
+        },
+        required: ['word', 'partOfSpeech', 'register', 'meaning', 'whyItFits', 'example'],
+        propertyOrdering: ['word', 'partOfSpeech', 'register', 'meaning', 'whyItFits', 'example'],
+    };
+
+    return {
+        systemInstruction,
+        userPrompt: text,
+        schema: {
+            type: 'object',
+            properties: {
+                detectedLanguage: { type: 'string' },
+                candidates: { type: 'array', items: candidate, minItems: 1, maxItems: 5 },
+                note: { type: 'string' },
+            },
+            required: ['detectedLanguage', 'candidates', 'note'],
+            propertyOrdering: ['detectedLanguage', 'candidates', 'note'],
+        },
+    };
+}
+
+function translatePrompt({ text, sourceLang, targetLang, context }: TranslateRequest): PromptResult {
+    const target = languageName(targetLang);
     const isAuto = sourceLang === 'auto';
 
-    const systemInstruction = `You are an expert linguist. The user is trying to remember or find a word based on a description.
+    const systemInstruction = `You are a professional translator. Translate the user's text into ${target}.
 
-FORMAT YOUR RESPONSE EXACTLY LIKE THIS:
-${isAuto ? '\n**Detected Language:** [Language Name] [flag emoji]' : ''}
+${sourceRule(sourceLang, 'text')}- Write natural, native-sounding ${target}. Keep the meaning, tone and register, and keep the formatting (line breaks, lists).
+- Render slang, Gen Z or internet expressions with a natural ${target} equivalent that keeps their tone; don't make casual text formal.
+- Output only the translation: no quotes, notes, alternatives or explanations.
+${contextRule(context)}${isAuto ? `- Start your output with a language tag like ${LANG_TAG_EXAMPLE}, using the ISO 639-1 code of the source text, then a newline, then the translation.\n` : ''}`;
 
-Here are the best candidates for your description:
+    return { systemInstruction, userPrompt: text };
+}
 
-1. **[Candidate Word in ${targetName}]** [*part of speech*]
-   [Literal translation or core meaning in ${sourceName}]
-   *Why it fits:* [Brief explanation in ${sourceName} of why this word matches the description]
-   *Example:* [Example sentence in ${targetName}]
+const BUILDERS: Record<OutputMode, (request: TranslateRequest) => PromptResult> = {
+    dictionary: dictionaryPrompt,
+    translate: translatePrompt,
+    find: findPrompt,
+};
 
-2. **[Alternative Word in ${targetName}]** [*part of speech*]
-   [Literal translation or core meaning in ${sourceName}]
-   *Why it fits:* [Brief explanation in ${sourceName}]
-   *Example:* [Example sentence in ${targetName}]
-
-(provide up to 3-5 strong candidates)
-
-📝 **Note:** [Any nuances, common mistakes, or context about these words in ${sourceName}]
-
-IMPORTANT RULES:
-- The user's description is written in ${sourceName}.
-- Provide the candidate words in ${targetName}.
-- All explanations and "Why it fits" must be in ${sourceName}.
-- Include gender/articles for the candidate words if applicable (e.g. el agua, la mesa).
-- DO NOT echo instructions, DO NOT output internal thoughts. Provide only the candidates.`;
-
-    const userPrompt = `${context ? `Context: ${context}\n` : ''}Description of the word: "${text}"`;
-
-    return { systemInstruction, userPrompt };
+export function buildPrompt(request: TranslateRequest): PromptResult {
+    return BUILDERS[request.mode](request);
 }
