@@ -60,8 +60,10 @@ export interface TranslationEntry {
     sourceText: string;
     /** Plain translation, or the JSON result for dictionary / find entries. */
     translatedText: string;
-    /** Missing on entries saved by older versions (markdown output). */
+    /** Mode the result was produced in. Missing on entries saved by older versions (markdown output). */
     mode?: OutputMode;
+    /** Mode that was selected in the picker (may be "auto"); restored with the entry. */
+    selectedMode?: TranslationMode;
     detectedLanguage?: string;
     sourceLang: string;
     targetLang: string;

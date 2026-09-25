@@ -7,20 +7,26 @@ import { HistorySidebar } from '@/components/HistorySidebar';
 import { SettingsModal } from '@/components/SettingsModal';
 import { TranslationEntry } from '@/lib/history';
 import { usePreferences } from '@/hooks/usePreferences';
+import { useInstallStatus } from '@/lib/install';
 
 export default function Home() {
     const [historyOpen, setHistoryOpen] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [restoredEntry, setRestoredEntry] = useState<TranslationEntry | null>(null);
     const prefs = usePreferences();
-    const { setSourceLang, setTargetLang } = prefs;
+    const installStatus = useInstallStatus();
+    const { applySettings, mode: currentMode } = prefs;
 
+    // Restores the entry's result and the exact settings it was made with.
     const handleSelectHistory = useCallback((entry: TranslationEntry) => {
         setRestoredEntry(entry);
-        setSourceLang(entry.sourceLang);
-        setTargetLang(entry.targetLang);
+        applySettings({
+            mode: entry.selectedMode ?? entry.mode ?? currentMode,
+            sourceLang: entry.sourceLang,
+            targetLang: entry.targetLang,
+        });
         setHistoryOpen(false);
-    }, [setSourceLang, setTargetLang]);
+    }, [applySettings, currentMode]);
 
     return (
         <main className="min-h-screen flex flex-col relative overflow-hidden">
@@ -61,6 +67,9 @@ export default function Home() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
+                        {installStatus === 'available' && (
+                            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-blue-500 ring-2 ring-[var(--background)]" aria-label="App can be installed" />
+                        )}
                     </button>
 
                     <button

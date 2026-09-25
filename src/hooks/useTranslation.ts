@@ -106,6 +106,7 @@ export function useTranslation({
             saveTranslation({
                 sourceText: text,
                 ...serializeResult(final),
+                selectedMode: mode,
                 sourceLang,
                 targetLang,
                 context: trimmedContext,

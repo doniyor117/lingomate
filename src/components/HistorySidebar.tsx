@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState, useSyncExternalStore } from 'react';
 import { TranslationEntry, useHistory, deleteHistoryEntry, clearHistory, formatTimestamp } from '@/lib/history';
 import { entryToResult, toPreview } from '@/lib/results';
+import { getModeInfo } from '@/lib/modes';
+import { ModeIcon } from './ModePicker';
 import { getLanguageByCode } from '@/lib/languages';
 
 interface HistorySidebarProps {
@@ -11,63 +12,8 @@ interface HistorySidebarProps {
     onSelect: (entry: TranslationEntry) => void;
 }
 
-interface BeforeInstallPromptEvent extends Event {
-    prompt: () => Promise<void>;
-    userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
-}
-
-const STANDALONE_QUERY = '(display-mode: standalone)';
-
-function subscribeStandalone(onChange: () => void) {
-    const mq = window.matchMedia(STANDALONE_QUERY);
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
-}
-
 export function HistorySidebar({ isOpen, onClose, onSelect }: HistorySidebarProps) {
     const history = useHistory();
-    const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-    const [justInstalled, setJustInstalled] = useState(false);
-    const isStandalone = useSyncExternalStore(
-        subscribeStandalone,
-        () => window.matchMedia(STANDALONE_QUERY).matches,
-        () => false
-    );
-    const isInstalled = isStandalone || justInstalled;
-
-    // Listen for PWA install prompt
-    useEffect(() => {
-        const handleBeforeInstall = (e: Event) => {
-            e.preventDefault();
-            setDeferredPrompt(e as BeforeInstallPromptEvent);
-        };
-
-        const handleAppInstalled = () => {
-            setJustInstalled(true);
-            setDeferredPrompt(null);
-        };
-
-        window.addEventListener('beforeinstallprompt', handleBeforeInstall);
-        window.addEventListener('appinstalled', handleAppInstalled);
-
-        return () => {
-            window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
-            window.removeEventListener('appinstalled', handleAppInstalled);
-        };
-    }, []);
-
-    const handleInstall = async () => {
-        if (!deferredPrompt) return;
-
-        await deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-
-        if (outcome === 'accepted') {
-            setJustInstalled(true);
-        }
-        setDeferredPrompt(null);
-    };
-
     const handleDelete = (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
         deleteHistoryEntry(id);
@@ -138,11 +84,17 @@ export function HistorySidebar({ isOpen, onClose, onSelect }: HistorySidebarProp
                                 >
                                     <div className="flex items-start justify-between gap-2">
                                         <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 text-xs text-[var(--text-muted)] mb-1">
-                                                <span>{getLanguageByCode(entry.sourceLang)?.name || entry.sourceLang}</span>
-                                                <span>→</span>
-                                                <span>{getLanguageByCode(entry.targetLang)?.name || entry.targetLang}</span>
-                                                <span className="ml-auto">{formatTimestamp(entry.timestamp)}</span>
+                                            <div className="flex items-center gap-2 text-xs text-[var(--text-muted)] mb-1 min-w-0">
+                                                {entry.mode && (
+                                                    <span className="flex-shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[var(--surface-hover)] border border-[var(--border)] text-[var(--foreground)] font-medium whitespace-nowrap" title={`${getModeInfo(entry.mode).label} mode`}>
+                                                        <ModeIcon mode={entry.mode} className="w-3 h-3" />
+                                                        {getModeInfo(entry.mode).label}
+                                                    </span>
+                                                )}
+                                                <span className="truncate min-w-0">
+                                                    {getLanguageByCode(entry.sourceLang)?.name || entry.sourceLang} → {getLanguageByCode(entry.targetLang)?.name || entry.targetLang}
+                                                </span>
+                                                <span className="ml-auto flex-shrink-0 whitespace-nowrap">{formatTimestamp(entry.timestamp)}</span>
                                             </div>
                                             <p className="text-sm font-medium truncate mb-1">{entry.sourceText}</p>
                                             <p className="text-sm text-[var(--text-muted)] truncate">{toPreview(entryToResult(entry))}</p>
@@ -163,38 +115,6 @@ export function HistorySidebar({ isOpen, onClose, onSelect }: HistorySidebarProp
                     )}
                 </div>
 
-                {/* PWA Install Button - at bottom */}
-                {!isInstalled && (
-                    <div className="p-4 border-t border-[var(--border)]">
-                        <button
-                            onClick={handleInstall}
-                            disabled={!deferredPrompt}
-                            className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-all ${deferredPrompt
-                                ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 shadow-lg'
-                                : 'bg-[var(--surface)] text-[var(--text-muted)] cursor-not-allowed'
-                                }`}
-                        >
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                            </svg>
-                            {deferredPrompt ? 'Install App' : 'Open in browser to install'}
-                        </button>
-                        <p className="text-xs text-center text-[var(--text-muted)] mt-2">
-                            Install LumenAI on your device
-                        </p>
-                    </div>
-                )}
-
-                {isInstalled && (
-                    <div className="p-4 border-t border-[var(--border)]">
-                        <div className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-green-500/10 text-green-600">
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span className="font-medium">App Installed</span>
-                        </div>
-                    </div>
-                )}
             </div>
         </>
     );

@@ -52,8 +52,8 @@ export function useSpeech({
     targetSpeechText
 }: UseSpeechParams) {
     const [isListening, setIsListening] = useState(false);
-    const [isSpeakingSource, setIsSpeakingSource] = useState(false);
-    const [isSpeakingTarget, setIsSpeakingTarget] = useState(false);
+    // Which item is being read aloud ('source', 'target', or a result item's key).
+    const [speakingKey, setSpeakingKey] = useState<string | null>(null);
     const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
     // Ensure speech stops on unmount
@@ -112,38 +112,26 @@ export function useSpeech({
         }
     };
 
-    const handleSpeakSource = (text: string) => {
-        if (!text.trim()) return;
+    /** Reads `text` aloud, or stops it if that item is already playing. */
+    const speakItem = (key: string, text: string, lang: string) => {
         window.speechSynthesis.cancel();
-        setIsSpeakingTarget(false);
-
-        if (isSpeakingSource) {
-            setIsSpeakingSource(false);
+        if (speakingKey === key || !text.trim()) {
+            setSpeakingKey(null);
             return;
         }
-
-        setIsSpeakingSource(true);
-        speak(text, sourceSpeechLang, () => setIsSpeakingSource(false));
+        setSpeakingKey(key);
+        speak(text, lang, () => setSpeakingKey((current) => (current === key ? null : current)));
     };
 
-    const handleSpeakTarget = () => {
-        if (!targetSpeechText) return;
-        window.speechSynthesis.cancel();
-        setIsSpeakingSource(false);
-
-        if (isSpeakingTarget) {
-            setIsSpeakingTarget(false);
-            return;
-        }
-
-        setIsSpeakingTarget(true);
-        speak(targetSpeechText, targetLang, () => setIsSpeakingTarget(false));
-    };
+    const handleSpeakSource = (text: string) => speakItem('source', text, sourceSpeechLang);
+    const handleSpeakTarget = () => speakItem('target', targetSpeechText, targetLang);
 
     return {
         isListening,
-        isSpeakingSource,
-        isSpeakingTarget,
+        isSpeakingSource: speakingKey === 'source',
+        isSpeakingTarget: speakingKey === 'target',
+        speakingKey,
+        speakItem,
         toggleListening,
         handleSpeakSource,
         handleSpeakTarget

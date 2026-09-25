@@ -57,17 +57,20 @@ export function TranslatorPanel({
     });
 
     const detectedLanguage = getDetectedLanguage(result);
+    const sourceSpeechLang = sourceLang !== 'auto' ? sourceLang : detectedLanguage ?? 'en';
 
     const {
         isListening,
         isSpeakingSource,
         isSpeakingTarget,
+        speakingKey,
+        speakItem,
         toggleListening,
         handleSpeakSource,
         handleSpeakTarget
     } = useSpeech({
         sourceLang,
-        sourceSpeechLang: sourceLang !== 'auto' ? sourceLang : detectedLanguage ?? 'en',
+        sourceSpeechLang,
         targetLang,
         setSourceText,
         targetSpeechText: result ? toSpeechText(result) : '',
@@ -122,11 +125,14 @@ export function TranslatorPanel({
                 <TargetPanel
                     result={result}
                     detectedLanguage={sourceLang === 'auto' ? detectedLanguage : undefined}
+                    sourceLang={sourceLang === 'auto' ? detectedLanguage ?? 'auto' : sourceLang}
+                    targetLang={targetLang}
                     error={error}
                     isLoading={isLoading}
                     isStreaming={isBusy && !isLoading}
                     isSpeakingTarget={isSpeakingTarget}
                     handleSpeakTarget={handleSpeakTarget}
+                    speech={{ speakingKey, speakItem, sourceLang: sourceSpeechLang, targetLang }}
                 />
             </div>
 

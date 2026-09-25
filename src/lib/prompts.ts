@@ -140,6 +140,7 @@ function translatePrompt({ text, sourceLang, targetLang, context }: TranslateReq
 
 ${sourceRule(sourceLang, 'text')}- Write natural, native-sounding ${target}. Keep the meaning, tone and register, and keep the formatting (line breaks, lists).
 - Render slang, Gen Z or internet expressions with a natural ${target} equivalent that keeps their tone; don't make casual text formal.
+- If the text is already in ${target}, don't translate or reinterpret it: return it with grammar, spelling and punctuation corrected, keeping the meaning, wording and tone as close as possible (unchanged if it's already correct).
 - Output only the translation: no quotes, notes, alternatives or explanations.
 ${contextRule(context)}${isAuto ? `- Start your output with a language tag like ${LANG_TAG_EXAMPLE}, using the ISO 639-1 code of the source text, then a newline, then the translation.\n` : ''}`;
 

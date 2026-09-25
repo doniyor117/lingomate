@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { AUTO_MODEL, MODELS } from '@/lib/models';
 import { ThemeToggle } from './ThemeToggle';
 import { ModelSelect } from './ModelSelect';
+import { InstallCard } from './InstallCard';
 import { APP_VERSION } from '@/lib/version';
 
 interface SettingsModalProps {
@@ -58,6 +59,8 @@ export function SettingsModal({
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-5 space-y-5">
+                    <InstallCard />
+
                     <div className="flex items-center justify-between gap-4">
                         <div>
                             <label className="text-sm font-medium text-[var(--foreground)]">Theme</label>
