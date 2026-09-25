@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { ServiceWorkerRegister } from '@/components/ServiceWorkerRegister';
+import { VersionCheck } from '@/components/VersionCheck';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin', 'cyrillic'], display: 'swap', variable: '--font-inter' });
@@ -51,6 +52,7 @@ export default function RootLayout({
                     {children}
                 </ThemeProvider>
                 <ServiceWorkerRegister />
+                <VersionCheck />
             </body>
         </html>
     );

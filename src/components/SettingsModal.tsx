@@ -3,6 +3,7 @@ import { AUTO_MODEL, MODELS } from '@/lib/models';
 import { TranslationMode } from '@/lib/types';
 import { ThemeToggle } from './ThemeToggle';
 import { ModelSelect } from './ModelSelect';
+import { APP_VERSION } from '@/lib/version';
 
 interface SettingsModalProps {
     isOpen: boolean;
@@ -35,7 +36,7 @@ export function SettingsModal({
     if (!isOpen) return null;
 
     const modelOptions = [
-        { id: AUTO_MODEL, displayName: 'Auto (Gemini 3.5 Flash-Lite)' },
+        { id: AUTO_MODEL, displayName: 'Auto (Smart Selection)' },
         ...MODELS,
     ];
 
@@ -116,7 +117,8 @@ export function SettingsModal({
                     </div>
                 </div>
                 
-                <div className="p-4 border-t border-[var(--border)] bg-[var(--surface-hover)] text-right">
+                <div className="p-4 border-t border-[var(--border)] bg-[var(--surface-hover)] flex items-center justify-between gap-4">
+                    <span className="text-xs text-[var(--text-muted)] font-mono">v{APP_VERSION}</span>
                     <button
                         onClick={onClose}
                         className="px-4 py-2 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-sm font-medium rounded-lg transition-colors"
