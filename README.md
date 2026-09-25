@@ -2,7 +2,7 @@
 
 > **More than just words.** A smart, context-aware translator that understands nuance, slang, and multiple meanings.
 
-> **LIVE ON** [lumenai.software](https://lumenai.software/)
+> **LIVE ON** [lingomate-translate.vercel.app](https://lingomate-translate.vercel.app/)
 
 ![Next.js](https://img.shields.io/badge/Next.js-black?style=for-the-badge&logo=next.js&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
