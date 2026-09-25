@@ -1,6 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
 import { languages } from '@/lib/languages';
 
+// Minimal typing for the non-standard webkitSpeechRecognition API.
+interface SpeechRecognitionLike {
+    continuous: boolean;
+    interimResults: boolean;
+    lang: string;
+    onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+    onerror: ((event: { error: string }) => void) | null;
+    onend: (() => void) | null;
+    start: () => void;
+    stop: () => void;
+}
+
+type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
+
 interface UseSpeechParams {
     sourceLang: string;
     targetLang: string;
@@ -19,32 +33,7 @@ export function useSpeech({
     const [isListening, setIsListening] = useState(false);
     const [isSpeakingSource, setIsSpeakingSource] = useState(false);
     const [isSpeakingTarget, setIsSpeakingTarget] = useState(false);
-    const recognitionRef = useRef<any>(null);
-
-    // Initialize Speech Recognition
-    useEffect(() => {
-        if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
-            const SpeechRecognition = (window as any).webkitSpeechRecognition;
-            recognitionRef.current = new SpeechRecognition();
-            recognitionRef.current.continuous = false;
-            recognitionRef.current.interimResults = false;
-
-            recognitionRef.current.onresult = (event: any) => {
-                const transcript = event.results[0][0].transcript;
-                setSourceText(transcript);
-                setIsListening(false);
-            };
-
-            recognitionRef.current.onerror = (event: any) => {
-                console.error('Speech recognition error', event.error);
-                setIsListening(false);
-            };
-
-            recognitionRef.current.onend = () => {
-                setIsListening(false);
-            };
-        }
-    }, [setSourceText]);
+    const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
     // Ensure speech stops on unmount
     useEffect(() => {
@@ -55,19 +44,49 @@ export function useSpeech({
         };
     }, []);
 
+    // Created on first use rather than on page load; most sessions never touch the mic.
+    const getRecognition = () => {
+        if (recognitionRef.current) return recognitionRef.current;
+        if (!('webkitSpeechRecognition' in window)) return null;
+
+        const SpeechRecognition = (window as unknown as { webkitSpeechRecognition: SpeechRecognitionCtor }).webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            setSourceText(transcript);
+            setIsListening(false);
+        };
+
+        recognition.onerror = (event) => {
+            console.error('Speech recognition error', event.error);
+            setIsListening(false);
+        };
+
+        recognition.onend = () => {
+            setIsListening(false);
+        };
+
+        recognitionRef.current = recognition;
+        return recognition;
+    };
+
     const toggleListening = () => {
-        if (!recognitionRef.current) {
+        const recognition = getRecognition();
+        if (!recognition) {
             alert('Speech recognition is not supported in this browser. Please use Chrome or Edge.');
             return;
         }
 
         if (isListening) {
-            recognitionRef.current.stop();
+            recognition.stop();
         } else {
             if (sourceLang !== 'auto') {
-                recognitionRef.current.lang = sourceLang;
+                recognition.lang = sourceLang;
             }
-            recognitionRef.current.start();
+            recognition.start();
             setIsListening(true);
         }
     };
@@ -109,7 +128,7 @@ export function useSpeech({
             v.lang.replace('_', '-').startsWith(resolvedLang + '-')
         );
 
-        let selectedVoice = matchingVoices.find(v =>
+        const selectedVoice = matchingVoices.find(v =>
             v.name.includes('Google') || v.name.includes('Microsoft')
         ) || matchingVoices[0] || null;
 
@@ -172,7 +191,7 @@ export function useSpeech({
             v.lang.replace('_', '-').startsWith(targetLang + '-')
         );
 
-        let selectedVoice = matchingVoices.find(v =>
+        const selectedVoice = matchingVoices.find(v =>
             v.name.includes('Google') || v.name.includes('Microsoft')
         ) || matchingVoices[0] || null;
 

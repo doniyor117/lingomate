@@ -1,20 +1,18 @@
-import React, { memo, useState } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import React, { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 
-const remarkPlugins = [remarkGfm];
-
-// The parent re-renders on every keystroke in the source box; memoizing keeps the
-// markdown from being re-parsed unless the translation itself changed.
-const TranslationMarkdown = memo(function TranslationMarkdown({ text }: { text: string }) {
-    return <ReactMarkdown remarkPlugins={remarkPlugins}>{text}</ReactMarkdown>;
+// The markdown parser is ~60KB gzipped and only needed once a translation exists,
+// so keep it out of the initial bundle and fetch it when the browser is idle.
+const loadMarkdown = () => import('./TranslationMarkdown');
+const TranslationMarkdown = dynamic(loadMarkdown, {
+    ssr: false,
+    loading: () => null,
 });
 
 interface TargetPanelProps {
     translatedText: string;
     error: string;
     isLoading: boolean;
-    modelUsed: string;
     outputMode: string;
     isSpeakingTarget: boolean;
     handleSpeakTarget: () => void;
@@ -24,12 +22,21 @@ export function TargetPanel({
     translatedText,
     error,
     isLoading,
-    modelUsed,
     outputMode,
     isSpeakingTarget,
     handleSpeakTarget
 }: TargetPanelProps) {
     const [copied, setCopied] = useState(false);
+
+    useEffect(() => {
+        const preload = () => { loadMarkdown(); };
+        if ('requestIdleCallback' in window) {
+            const id = window.requestIdleCallback(preload);
+            return () => window.cancelIdleCallback(id);
+        }
+        const id = setTimeout(preload, 1500);
+        return () => clearTimeout(id);
+    }, []);
 
     const handleCopy = async () => {
         if (!translatedText) return;
@@ -103,12 +110,6 @@ export function TargetPanel({
 
             <div className="flex flex-row items-center justify-start gap-4 sm:gap-6 px-4 py-3 border-t border-[var(--border)] bg-[var(--surface-hover)] w-full overflow-x-auto whitespace-nowrap">
                 <div className="flex items-center gap-3 text-xs tracking-wide text-[var(--text-muted)]">
-                    {modelUsed && (
-                        <span className="flex items-center gap-1.5 font-medium">
-                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] flex-shrink-0" />
-                            {modelUsed}
-                        </span>
-                    )}
                     {outputMode && (
                         <span className="px-2.5 py-1 rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] font-semibold uppercase text-[10px] tracking-wider shadow-sm">
                             {outputMode}

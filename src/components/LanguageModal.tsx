@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { languages, searchLanguages, Language } from '@/lib/languages';
+import { languages, searchLanguages } from '@/lib/languages';
 
 interface LanguageModalProps {
     isOpen: boolean;
@@ -10,29 +10,26 @@ interface LanguageModalProps {
     selectedCode: string;
 }
 
-export function LanguageModal({
-    isOpen,
+// Only mounted while open, so the search box starts empty every time.
+export function LanguageModal({ isOpen, ...props }: LanguageModalProps) {
+    return isOpen ? <LanguageModalContent {...props} /> : null;
+}
+
+function LanguageModalContent({
     onClose,
     onSelect,
     title,
     hideAuto = false,
     selectedCode
-}: LanguageModalProps) {
+}: Omit<LanguageModalProps, 'isOpen'>) {
     const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
-        if (isOpen) {
-            document.body.style.overflow = 'hidden';
-            setSearchQuery('');
-        } else {
-            document.body.style.overflow = 'auto';
-        }
+        document.body.style.overflow = 'hidden';
         return () => {
             document.body.style.overflow = 'auto';
         };
-    }, [isOpen]);
-
-    if (!isOpen) return null;
+    }, []);
 
     let displayLanguages = searchQuery.trim() 
         ? searchLanguages(searchQuery) 
@@ -81,7 +78,7 @@ export function LanguageModal({
                 <div className="flex-1 overflow-y-auto p-2">
                     {displayLanguages.length === 0 ? (
                         <div className="text-center py-10 text-[var(--text-muted)]">
-                            No languages found for "{searchQuery}"
+                            No languages found for &ldquo;{searchQuery}&rdquo;
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">

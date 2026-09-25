@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { translate } from '@/lib/translate-service';
-import { getModelDisplayName } from '@/lib/models';
+import { translateStream } from '@/lib/translate-service';
 import { MAX_CHARS } from '@/lib/constants';
+
+const MODES = ['meaning', 'direct', 'reverse'];
 
 export async function POST(request: NextRequest) {
     try {
@@ -9,11 +10,8 @@ export async function POST(request: NextRequest) {
         const { text, sourceLang, targetLang, context, mode, model } = body;
 
         // Validation
-        if (!text || typeof text !== 'string') {
-            return NextResponse.json(
-                { error: 'Text is required' },
-                { status: 400 }
-            );
+        if (!text || typeof text !== 'string' || !text.trim()) {
+            return NextResponse.json({ error: 'Text is required' }, { status: 400 });
         }
 
         if (text.length > MAX_CHARS) {
@@ -24,31 +22,25 @@ export async function POST(request: NextRequest) {
         }
 
         if (!targetLang) {
-            return NextResponse.json(
-                { error: 'Target language is required' },
-                { status: 400 }
-            );
+            return NextResponse.json({ error: 'Target language is required' }, { status: 400 });
         }
 
-        if (mode && !['meaning', 'direct', 'reverse'].includes(mode)) {
+        if (mode && !MODES.includes(mode)) {
             return NextResponse.json(
                 { error: 'Invalid mode. Must be meaning, direct, or reverse' },
                 { status: 400 }
             );
         }
 
-        // Get API keys
-        const groqApiKey = process.env.GROQ_API_KEY;
-        const geminiApiKey = process.env.GEMINI_API_KEY;
-
-        if (!groqApiKey && !geminiApiKey) {
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) {
             return NextResponse.json(
-                { error: 'No translation API keys (GROQ_API_KEY or GEMINI_API_KEY) are configured in .env.local' },
+                { error: 'GEMINI_API_KEY is not configured' },
                 { status: 500 }
             );
         }
 
-        const result = await translate(
+        const result = await translateStream(
             {
                 text: text.trim(),
                 sourceLang: sourceLang || 'auto',
@@ -57,21 +49,22 @@ export async function POST(request: NextRequest) {
                 mode,
                 model,
             },
-            groqApiKey,
-            geminiApiKey
+            apiKey
         );
 
-        return NextResponse.json({
-            translation: result.translation,
-            model: getModelDisplayName(result.model),
-            mode: result.mode,
+        return new Response(result.stream, {
+            headers: {
+                'Content-Type': 'text/plain; charset=utf-8',
+                'Cache-Control': 'no-store',
+                'X-Accel-Buffering': 'no',
+                'X-Model': result.model,
+            },
         });
     } catch (error) {
         console.error('Translation error:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Translation failed. Please try again.';
         return NextResponse.json(
-            { error: errorMessage },
-            { status: 500 }
+            { error: 'Translation failed. Please try again.' },
+            { status: 502 }
         );
     }
 }

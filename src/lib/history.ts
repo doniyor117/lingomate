@@ -1,13 +1,33 @@
+import { useMemo } from 'react';
 import { TranslationEntry } from './types';
+import { readStored, useStoredString, writeStored } from './storage';
 
 export type { TranslationEntry };
 
 const HISTORY_KEY = 'translation_history';
 const MAX_HISTORY = 50;
 
-export function saveTranslation(entry: Omit<TranslationEntry, 'id' | 'timestamp'>): TranslationEntry {
-    const history = getHistory();
+function parseHistory(raw: string | null): TranslationEntry[] {
+    if (!raw) return [];
+    try {
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch {
+        return [];
+    }
+}
 
+function getHistory(): TranslationEntry[] {
+    return parseHistory(readStored(HISTORY_KEY));
+}
+
+/** Translation history that re-renders subscribers whenever it changes. */
+export function useHistory(): TranslationEntry[] {
+    const raw = useStoredString(HISTORY_KEY);
+    return useMemo(() => parseHistory(raw), [raw]);
+}
+
+export function saveTranslation(entry: Omit<TranslationEntry, 'id' | 'timestamp'>): TranslationEntry {
     const newEntry: TranslationEntry = {
         ...entry,
         id: crypto.randomUUID(),
@@ -15,39 +35,19 @@ export function saveTranslation(entry: Omit<TranslationEntry, 'id' | 'timestamp'
     };
 
     // Add to beginning and limit to MAX_HISTORY
-    const updated = [newEntry, ...history].slice(0, MAX_HISTORY);
-
-    if (typeof window !== 'undefined') {
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
-    }
+    const updated = [newEntry, ...getHistory()].slice(0, MAX_HISTORY);
+    writeStored(HISTORY_KEY, JSON.stringify(updated));
 
     return newEntry;
 }
 
-export function getHistory(): TranslationEntry[] {
-    if (typeof window === 'undefined') return [];
-
-    try {
-        const stored = localStorage.getItem(HISTORY_KEY);
-        return stored ? JSON.parse(stored) : [];
-    } catch {
-        return [];
-    }
-}
-
 export function deleteHistoryEntry(id: string): void {
-    const history = getHistory();
-    const filtered = history.filter((entry) => entry.id !== id);
-
-    if (typeof window !== 'undefined') {
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(filtered));
-    }
+    const filtered = getHistory().filter((entry) => entry.id !== id);
+    writeStored(HISTORY_KEY, JSON.stringify(filtered));
 }
 
 export function clearHistory(): void {
-    if (typeof window !== 'undefined') {
-        localStorage.removeItem(HISTORY_KEY);
-    }
+    writeStored(HISTORY_KEY, null);
 }
 
 export function formatTimestamp(timestamp: number): string {

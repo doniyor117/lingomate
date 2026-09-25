@@ -1,14 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { TranslationEntry, getHistory, deleteHistoryEntry, clearHistory, formatTimestamp } from '@/lib/history';
+import { useEffect, useState, useSyncExternalStore } from 'react';
+import { TranslationEntry, useHistory, deleteHistoryEntry, clearHistory, formatTimestamp } from '@/lib/history';
 import { getLanguageByCode } from '@/lib/languages';
 
 interface HistorySidebarProps {
     isOpen: boolean;
     onClose: () => void;
     onSelect: (entry: TranslationEntry) => void;
-    refreshTrigger?: number;
 }
 
 interface BeforeInstallPromptEvent extends Event {
@@ -16,14 +15,24 @@ interface BeforeInstallPromptEvent extends Event {
     userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-export function HistorySidebar({ isOpen, onClose, onSelect, refreshTrigger }: HistorySidebarProps) {
-    const [history, setHistory] = useState<TranslationEntry[]>([]);
-    const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-    const [isInstalled, setIsInstalled] = useState(false);
+const STANDALONE_QUERY = '(display-mode: standalone)';
 
-    useEffect(() => {
-        setHistory(getHistory());
-    }, [refreshTrigger]);
+function subscribeStandalone(onChange: () => void) {
+    const mq = window.matchMedia(STANDALONE_QUERY);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+}
+
+export function HistorySidebar({ isOpen, onClose, onSelect }: HistorySidebarProps) {
+    const history = useHistory();
+    const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+    const [justInstalled, setJustInstalled] = useState(false);
+    const isStandalone = useSyncExternalStore(
+        subscribeStandalone,
+        () => window.matchMedia(STANDALONE_QUERY).matches,
+        () => false
+    );
+    const isInstalled = isStandalone || justInstalled;
 
     // Listen for PWA install prompt
     useEffect(() => {
@@ -33,14 +42,9 @@ export function HistorySidebar({ isOpen, onClose, onSelect, refreshTrigger }: Hi
         };
 
         const handleAppInstalled = () => {
-            setIsInstalled(true);
+            setJustInstalled(true);
             setDeferredPrompt(null);
         };
-
-        // Check if already installed
-        if (window.matchMedia('(display-mode: standalone)').matches) {
-            setIsInstalled(true);
-        }
 
         window.addEventListener('beforeinstallprompt', handleBeforeInstall);
         window.addEventListener('appinstalled', handleAppInstalled);
@@ -58,7 +62,7 @@ export function HistorySidebar({ isOpen, onClose, onSelect, refreshTrigger }: Hi
         const { outcome } = await deferredPrompt.userChoice;
 
         if (outcome === 'accepted') {
-            setIsInstalled(true);
+            setJustInstalled(true);
         }
         setDeferredPrompt(null);
     };
@@ -66,13 +70,11 @@ export function HistorySidebar({ isOpen, onClose, onSelect, refreshTrigger }: Hi
     const handleDelete = (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
         deleteHistoryEntry(id);
-        setHistory(getHistory());
     };
 
     const handleClear = () => {
         if (confirm('Clear all translation history?')) {
             clearHistory();
-            setHistory([]);
         }
     };
 

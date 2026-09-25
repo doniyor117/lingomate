@@ -1,19 +1,17 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { TranslationEntry, TranslationMode } from '@/lib/types';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useSpeech } from '@/hooks/useSpeech';
 import { SourcePanel } from './SourcePanel';
 import { TargetPanel } from './TargetPanel';
 import { LanguageSelect } from './LanguageSelect';
-import { getModelDisplayName } from '@/lib/models';
 
 interface TranslatorPanelProps {
-    onTranslationComplete?: () => void;
-    restoredEntry: TranslationEntry | null;
+    /** Entry restored from history; the parent remounts the panel (via key) when it changes. */
+    initialEntry: TranslationEntry | null;
     translationMode: TranslationMode;
-    onModeChange: (mode: TranslationMode) => void;
     meaningModel: string;
     directModel: string;
     reverseModel: string;
@@ -23,11 +21,9 @@ interface TranslatorPanelProps {
     onTargetLangChange: (lang: string) => void;
 }
 
-export function TranslatorPanel({ 
-    onTranslationComplete, 
-    restoredEntry,
+export function TranslatorPanel({
+    initialEntry,
     translationMode,
-    onModeChange,
     meaningModel,
     directModel,
     reverseModel,
@@ -36,8 +32,8 @@ export function TranslatorPanel({
     onSourceLangChange,
     onTargetLangChange
 }: TranslatorPanelProps) {
-    const [context, setContext] = useState('');
-    const [showContext, setShowContext] = useState(false);
+    const [context, setContext] = useState(initialEntry?.context ?? '');
+    const [showContext, setShowContext] = useState(!!initialEntry?.context);
 
     const {
         sourceText,
@@ -45,13 +41,12 @@ export function TranslatorPanel({
         translatedText,
         setTranslatedText,
         isLoading,
+        isStreaming,
         error,
         setError,
-        modelUsed,
-        setModelUsed,
         outputMode,
-        setOutputMode,
-        handleTranslate
+        handleTranslate,
+        cancelTranslation
     } = useTranslation({
         sourceLang,
         targetLang,
@@ -60,7 +55,7 @@ export function TranslatorPanel({
         meaningModel,
         directModel,
         reverseModel,
-        onTranslationComplete
+        initialEntry
     });
 
     const {
@@ -78,22 +73,6 @@ export function TranslatorPanel({
         outputMode
     });
 
-    // Restore from history
-    useEffect(() => {
-        if (restoredEntry) {
-            setSourceText(restoredEntry.sourceText);
-            setTranslatedText(restoredEntry.translatedText);
-            onSourceLangChange(restoredEntry.sourceLang);
-            onTargetLangChange(restoredEntry.targetLang);
-            if (restoredEntry.context) {
-                setContext(restoredEntry.context);
-                setShowContext(true);
-            }
-            setError('');
-            setModelUsed('');
-        }
-    }, [restoredEntry, setSourceText, setTranslatedText, setError, setModelUsed]);
-
     const handleSwapLanguages = () => {
         if (sourceLang === 'auto') {
             onSourceLangChange(targetLang);
@@ -103,17 +82,17 @@ export function TranslatorPanel({
             onSourceLangChange(targetLang);
             onTargetLangChange(temp);
         }
+        cancelTranslation();
         setSourceText(translatedText.replace(/\*/g, '').replace(/\[.*?\]/g, '').trim());
         setTranslatedText('');
-        setModelUsed('');
         setError('');
     };
 
     const handleClear = () => {
+        cancelTranslation();
         setSourceText('');
         setTranslatedText('');
         setError('');
-        setModelUsed('');
     };
 
     return (
@@ -135,7 +114,7 @@ export function TranslatorPanel({
                     showContext={showContext}
                     setShowContext={setShowContext}
                     handleTranslate={handleTranslate}
-                    isLoading={isLoading}
+                    isLoading={isLoading || isStreaming}
                     isListening={isListening}
                     toggleListening={toggleListening}
                     isSpeakingSource={isSpeakingSource}
@@ -147,8 +126,7 @@ export function TranslatorPanel({
                     translatedText={translatedText}
                     error={error}
                     isLoading={isLoading}
-                    modelUsed={modelUsed || getModelDisplayName(translationMode === 'direct' ? directModel : translationMode === 'reverse' ? reverseModel : meaningModel)}
-                    outputMode={outputMode || translationMode}
+                    outputMode={translatedText || isLoading ? outputMode : translationMode}
                     isSpeakingTarget={isSpeakingTarget}
                     handleSpeakTarget={handleSpeakTarget}
                 />

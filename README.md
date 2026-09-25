@@ -7,7 +7,6 @@
 ![Next.js](https://img.shields.io/badge/Next.js-black?style=for-the-badge&logo=next.js&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
-![Groq](https://img.shields.io/badge/Powered_by-Groq-orange?style=for-the-badge)
 ![Gemini](https://img.shields.io/badge/Powered_by-Gemini-blue?style=for-the-badge)
 
 ## ✨ Features
@@ -20,10 +19,10 @@ LumenAI doesn't just do 1-to-1 translation. Choose the mode that fits your exact
 *   **⚡ Direct Mode**: Fast, pure, native-sounding translation. Ideal for sentences, paragraphs, or when you just need the text translated accurately without extra fluff.
 *   **🔍 Reverse Lookup**: Forgot a word? Describe it! Type "a place where you borrow books" and LumenAI will instantly find the target word for you (e.g., "Library") in your chosen language.
 
-### ⚙️ Customizable AI Engines
-Take full control over the AI powering your translations. You can mix and match models for different modes!
-*   **Groq Inference Engine**: Blazing fast models including **Llama 3.3 70B**, **Llama 4 Scout**, and **Qwen 3**.
-*   **Google AI**: Powerful models including **Gemini 3.1 Flash-Lite** and **Gemma 4**.
+### ⚡ Fast, Streaming AI Engine
+Powered by Google's low-latency **Gemini Flash-Lite** models. Translations stream in word by word as they're generated.
+*   **Gemini 3.5 Flash-Lite** (default) and **Gemini 3.1 Flash-Lite**, selectable per mode in Settings.
+*   **Automatic fallback**: if one model is rate-limited or slow to respond, the other takes over.
 
 ### 🎧 Audio & Voice Features
 *   **Speech-to-Text (STT)**: Speak directly into the app using native browser speech recognition.
@@ -47,7 +46,7 @@ Take full control over the AI powering your translations. You can mix and match 
 ### Prerequisites
 *   Node.js 18+
 *   npm or yarn
-*   API Keys for [Groq](https://console.groq.com/) and/or [Gemini](https://aistudio.google.com/app/apikey)
+*   A [Gemini API key](https://aistudio.google.com/app/apikey)
 
 ### Installation
 
@@ -63,12 +62,8 @@ Take full control over the AI powering your translations. You can mix and match 
     ```
 
 3.  **Configure Environment**
-    Create a `.env.local` file in the root directory. You can use one or both:
+    Create a `.env.local` file in the root directory:
     ```env
-    # Groq API Key
-    GROQ_API_KEY=gsk_your_groq_key_here
-
-    # Gemini API Key 
     GEMINI_API_KEY=your_gemini_key_here
     ```
 

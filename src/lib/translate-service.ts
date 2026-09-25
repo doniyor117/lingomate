@@ -1,206 +1,152 @@
-import { GOOGLE_MODELS, GROQ_MODELS, getModelProvider } from './models';
+import { getModelOrder } from './models';
 import { buildMeaningPrompt, buildDirectPrompt, buildReverseLookupPrompt, PromptResult } from './prompts';
-import { OutputMode, TranslateRequest, TranslateResponse } from './types';
+import { OutputMode, TranslateRequest } from './types';
 
-// API endpoints
-const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 
-// Groq only accepts reasoning_effort "none" for Qwen; GPT-OSS accepts low/medium/high
-// and rejects "none" with a 400, which used to silently burn a fallback round trip.
-const REASONING_EFFORT: Record<string, string> = {
-    'qwen/qwen3-32b': 'none',
-    'openai/gpt-oss-120b': 'low',
-    'openai/gpt-oss-20b': 'low',
-};
+// If a model hasn't produced its first token by then, move on to the next one.
+const FIRST_TOKEN_TIMEOUT_MS = 12000;
+// Hard cap for the whole streamed answer once it has started.
+const TOTAL_TIMEOUT_MS = 60000;
 
-// A hung upstream would otherwise block the whole fallback chain indefinitely.
-const REQUEST_TIMEOUT_MS = 20000;
-
-/**
- * Custom error class for rate limiting
- */
-class RateLimitError extends Error {
-    constructor(model: string, status: number, message: string) {
-        super(`Rate limit hit for ${model}: ${status} - ${message}`);
-        this.name = 'RateLimitError';
-    }
+export interface TranslationStream {
+    model: string;
+    stream: ReadableStream<Uint8Array>;
 }
 
-/**
- * Translate with Groq API
- */
-async function translateWithGroq(
-    model: string,
-    prompt: PromptResult,
-    apiKey: string
-): Promise<string> {
-    const body: any = {
-        model,
-        messages: [
-            { role: 'system', content: prompt.systemInstruction },
-            { role: 'user', content: prompt.userPrompt }
-        ],
-        temperature: 0.3,
-        max_tokens: 2000,
-    };
-
-    const reasoningEffort = REASONING_EFFORT[model];
-    if (reasoningEffort) {
-        body.reasoning_effort = reasoningEffort;
-        if (reasoningEffort !== 'none') body.include_reasoning = false;
-    }
-
-    const response = await fetch(GROQ_URL, {
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-    });
-
-    if (!response.ok) {
-        const errorText = await response.text();
-        if (response.status === 429 || response.status === 503 || response.status === 529) {
-            throw new RateLimitError(model, response.status, errorText);
-        }
-        throw new Error(`Groq ${model} failed: ${response.status} - ${errorText}`);
-    }
-
-    const data = await response.json();
-    return data.choices?.[0]?.message?.content || '';
-}
-
-/**
- * Translate with Gemini API
- */
-async function translateWithGemini(
-    model: string,
-    prompt: PromptResult,
-    apiKey: string
-): Promise<string> {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-    const response = await fetch(url, {
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'x-goog-api-key': apiKey,
-        },
-        body: JSON.stringify({
-            systemInstruction: {
-                parts: [{ text: prompt.systemInstruction }]
-            },
-            contents: [{ parts: [{ text: prompt.userPrompt }] }],
-            generationConfig: {
-                temperature: 0.3,
-                maxOutputTokens: 2000,
-            },
-        }),
-    });
-
-    if (!response.ok) {
-        const errorText = await response.text();
-        if (response.status === 429 || response.status === 503) {
-            throw new RateLimitError(model, response.status, errorText);
-        }
-        throw new Error(`Gemini ${model} failed: ${response.status} - ${errorText}`);
-    }
-
-    const data = await response.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-}
-
-/**
- * Main translation function
- */
-export async function translate(
-    request: TranslateRequest,
-    groqApiKey?: string,
-    geminiApiKey?: string
-): Promise<TranslateResponse> {
-    const execMode: OutputMode = (request.mode as OutputMode) || 'meaning';
-
-    const promptParams = {
+function buildPrompt(request: TranslateRequest): PromptResult {
+    const params = {
         text: request.text,
         sourceLang: request.sourceLang,
         targetLang: request.targetLang,
         context: request.context,
     };
+    if (request.mode === 'reverse') return buildReverseLookupPrompt(params);
+    if (request.mode === 'direct') return buildDirectPrompt(params);
+    return buildMeaningPrompt(params);
+}
 
-    let prompt: PromptResult;
-    if (execMode === 'reverse') {
-        prompt = buildReverseLookupPrompt(promptParams);
-    } else if (execMode === 'direct') {
-        prompt = buildDirectPrompt(promptParams);
-    } else {
-        prompt = buildMeaningPrompt(promptParams);
-    }
+/**
+ * Reads Gemini's SSE stream and yields answer text, skipping thought parts.
+ */
+async function* readGeminiText(body: ReadableStream<Uint8Array>): AsyncGenerator<string> {
+    const reader = body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
 
-    // Determine the list of models to try
-    let modelsToTry: string[] = [];
-    const preferredModel = request.model && request.model !== 'auto' ? request.model : null;
+    try {
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
 
-    const TOP_5_MODELS = [
-        'gemini-3.1-flash-lite',
-        'openai/gpt-oss-120b',
-        'llama-3.3-70b-versatile',
-        'qwen/qwen3-32b',
-        'gemma-4-31b-it'
-    ];
+            let newline: number;
+            while ((newline = buffer.indexOf('\n')) !== -1) {
+                const line = buffer.slice(0, newline).trim();
+                buffer = buffer.slice(newline + 1);
+                if (!line.startsWith('data:')) continue;
 
-    if (preferredModel) {
-        const provider = getModelProvider(preferredModel);
-        if (provider === 'google') {
-            modelsToTry = [preferredModel, ...GOOGLE_MODELS.map(m => m.id).filter(id => id !== preferredModel)];
-        } else if (provider === 'groq') {
-            modelsToTry = [preferredModel, ...GROQ_MODELS.map(m => m.id).filter(id => id !== preferredModel)];
+                const payload = JSON.parse(line.slice(5));
+                if (payload.error) {
+                    throw new Error(payload.error.message || 'Gemini stream error');
+                }
+                const parts = payload.candidates?.[0]?.content?.parts ?? [];
+                for (const part of parts) {
+                    if (part.text && !part.thought) yield part.text;
+                }
+            }
         }
-    } else {
-        // Auto model selection uses the unified Top 5 ranking
-        modelsToTry = [...TOP_5_MODELS];
+    } finally {
+        reader.releaseLock();
     }
+}
 
+/**
+ * Opens a streaming request to one model and waits for its first token, so a
+ * failing, rate-limited or empty model can still fall back to the next one
+ * before anything has been sent to the client.
+ */
+async function openModelStream(model: string, prompt: PromptResult, apiKey: string): Promise<TranslationStream> {
+    const controller = new AbortController();
+    let timer = setTimeout(() => controller.abort(new Error(`${model} timed out`)), FIRST_TOKEN_TIMEOUT_MS);
+
+    try {
+        const response = await fetch(`${GEMINI_BASE_URL}/${model}:streamGenerateContent?alt=sse`, {
+            method: 'POST',
+            signal: controller.signal,
+            headers: {
+                'Content-Type': 'application/json',
+                'x-goog-api-key': apiKey,
+            },
+            body: JSON.stringify({
+                systemInstruction: { parts: [{ text: prompt.systemInstruction }] },
+                contents: [{ role: 'user', parts: [{ text: prompt.userPrompt }] }],
+                generationConfig: {
+                    temperature: 0.3,
+                    maxOutputTokens: 2000,
+                    // Translation needs no reasoning; minimal thinking keeps time-to-first-token low.
+                    thinkingConfig: { thinkingLevel: 'minimal' },
+                },
+            }),
+        });
+
+        if (!response.ok || !response.body) {
+            const errorText = await response.text();
+            throw new Error(`Gemini ${model} failed: ${response.status} - ${errorText}`);
+        }
+
+        const chunks = readGeminiText(response.body);
+        let first = await chunks.next();
+        while (!first.done && !first.value) first = await chunks.next();
+        if (first.done) throw new Error(`Empty response from ${model}`);
+
+        clearTimeout(timer);
+        timer = setTimeout(() => controller.abort(new Error(`${model} timed out`)), TOTAL_TIMEOUT_MS);
+
+        const encoder = new TextEncoder();
+        const stream = new ReadableStream<Uint8Array>({
+            async start(streamController) {
+                try {
+                    streamController.enqueue(encoder.encode(first.value as string));
+                    for await (const text of chunks) {
+                        streamController.enqueue(encoder.encode(text));
+                    }
+                    streamController.close();
+                } catch (error) {
+                    streamController.error(error);
+                } finally {
+                    clearTimeout(timer);
+                }
+            },
+            cancel() {
+                clearTimeout(timer);
+                controller.abort();
+            },
+        });
+
+        return { model, stream };
+    } catch (error) {
+        clearTimeout(timer);
+        controller.abort();
+        throw error;
+    }
+}
+
+/**
+ * Streams a translation, trying the requested model first and falling back
+ * to the other Flash-Lite model if it fails before producing any output.
+ */
+export async function translateStream(request: TranslateRequest, apiKey: string): Promise<TranslationStream & { mode: OutputMode }> {
+    const prompt = buildPrompt(request);
+    const mode: OutputMode = request.mode || 'meaning';
     let lastError: Error | null = null;
 
-    for (const model of modelsToTry) {
-        const provider = getModelProvider(model);
-
-        if (provider === 'google') {
-            if (!geminiApiKey) {
-                lastError = new Error(`GEMINI_API_KEY is not configured for model ${model}`);
-                continue;
-            }
-            try {
-                const translation = await translateWithGemini(model, prompt, geminiApiKey);
-                if (!translation) throw new Error("Empty response from API");
-                return {
-                    translation,
-                    model,
-                    mode: execMode,
-                };
-            } catch (error) {
-                console.warn(`Gemini model ${model} failed, trying next fallback:`, error);
-                lastError = error instanceof Error ? error : new Error(String(error));
-            }
-        } else {
-            if (!groqApiKey) {
-                lastError = new Error(`GROQ_API_KEY is not configured for model ${model}`);
-                continue;
-            }
-            try {
-                const translation = await translateWithGroq(model, prompt, groqApiKey);
-                if (!translation) throw new Error("Empty response from API");
-                return {
-                    translation,
-                    model,
-                    mode: execMode,
-                };
-            } catch (error) {
-                console.warn(`Groq model ${model} failed, trying next fallback:`, error);
-                lastError = error instanceof Error ? error : new Error(String(error));
-            }
+    for (const model of getModelOrder(request.model)) {
+        try {
+            return { ...(await openModelStream(model, prompt, apiKey)), mode };
+        } catch (error) {
+            console.warn(`Gemini model ${model} failed, trying next fallback:`, error);
+            lastError = error instanceof Error ? error : new Error(String(error));
         }
     }
 

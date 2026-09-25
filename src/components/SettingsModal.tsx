@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { GOOGLE_MODELS, GROQ_MODELS } from '@/lib/models';
+import { MODELS } from '@/lib/models';
 import { TranslationMode } from '@/lib/types';
 import { ThemeToggle } from './ThemeToggle';
 import { ModelSelect } from './ModelSelect';
@@ -42,15 +42,7 @@ export function SettingsModal({
 
     if (!isOpen) return null;
 
-    const modelGroups = [
-        { label: 'Google Gemini (High Context)', models: GOOGLE_MODELS },
-        { label: 'Groq (Fast)', models: GROQ_MODELS }
-    ];
-
-    const directModelGroups = [
-        { label: 'Google Gemini (High Quality)', models: GOOGLE_MODELS },
-        { label: 'Groq (Fast)', models: GROQ_MODELS }
-    ];
+    const modelGroups = [{ label: 'Gemini Flash-Lite', models: MODELS }];
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in p-4 sm:p-6">
@@ -129,11 +121,11 @@ export function SettingsModal({
 
                         <div className="space-y-1.5 relative z-20">
                             <label className="text-sm font-medium text-[var(--foreground)] mt-4 block">Direct Mode</label>
-                            <p className="text-xs text-[var(--text-muted)] mb-2">Used for fast, literal sentence translations.</p>
+                            <p className="text-xs text-[var(--text-muted)] mb-2">Used for literal sentence translations.</p>
                             <ModelSelect 
                                 value={directModel} 
                                 onChange={onDirectModelChange} 
-                                groups={directModelGroups} 
+                                groups={modelGroups} 
                             />
                         </div>
 

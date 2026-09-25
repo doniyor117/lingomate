@@ -1,71 +1,52 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useCallback, ReactNode } from 'react';
+import { useStoredValue } from '@/lib/storage';
 
 type Theme = 'light' | 'dark' | 'system';
 
 interface ThemeContextType {
     theme: Theme;
     setTheme: (theme: Theme) => void;
-    resolvedTheme: 'light' | 'dark';
 }
 
 const ThemeContext = createContext<ThemeContextType>({
     theme: 'system',
     setTheme: () => { },
-    resolvedTheme: 'light',
 });
 
+const DARK_QUERY = '(prefers-color-scheme: dark)';
+const isTheme = (v: string) => v === 'light' || v === 'dark' || v === 'system';
+
+function applyTheme(theme: Theme) {
+    const effective = theme === 'system'
+        ? (window.matchMedia(DARK_QUERY).matches ? 'dark' : 'light')
+        : theme;
+    const root = document.documentElement;
+    root.classList.remove('light', 'dark');
+    root.classList.add(effective);
+}
+
+// The inline script in layout.tsx applies the saved theme before first paint;
+// this provider only handles changes after that.
 export function ThemeProvider({ children }: { children: ReactNode }) {
-    const [theme, setTheme] = useState<Theme>('system');
-    const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
-    const [mounted, setMounted] = useState(false);
+    const [theme, storeTheme] = useStoredValue<Theme>('theme', 'system', isTheme);
 
-    useEffect(() => {
-        setMounted(true);
-        const stored = localStorage.getItem('theme') as Theme | null;
-        if (stored) {
-            setTheme(stored);
-        }
-    }, []);
-
-    useEffect(() => {
-        if (!mounted) return;
-
-        const root = document.documentElement;
-        let effectiveTheme: 'light' | 'dark';
-
-        if (theme === 'system') {
-            effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
-                ? 'dark'
-                : 'light';
-        } else {
-            effectiveTheme = theme;
-        }
-
-        root.classList.remove('light', 'dark');
-        root.classList.add(effectiveTheme);
-        setResolvedTheme(effectiveTheme);
-        localStorage.setItem('theme', theme);
-    }, [theme, mounted]);
+    const setTheme = useCallback((next: Theme) => {
+        storeTheme(next);
+        applyTheme(next);
+    }, [storeTheme]);
 
     useEffect(() => {
         if (theme !== 'system') return;
-
-        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-        const handleChange = (e: MediaQueryListEvent) => {
-            const root = document.documentElement;
-            root.classList.remove('light', 'dark');
-            root.classList.add(e.matches ? 'dark' : 'light');
-            setResolvedTheme(e.matches ? 'dark' : 'light');
-        };
-
+        const mediaQuery = window.matchMedia(DARK_QUERY);
+        const handleChange = () => applyTheme('system');
         mediaQuery.addEventListener('change', handleChange);
         return () => mediaQuery.removeEventListener('change', handleChange);
     }, [theme]);
 
     return (
-        <ThemeContext.Provider value={{ theme, setTheme, resolvedTheme }}>
+        <ThemeContext.Provider value={{ theme, setTheme }}>
             {children}
         </ThemeContext.Provider>
     );

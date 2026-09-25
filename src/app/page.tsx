@@ -11,18 +11,16 @@ import { usePreferences } from '@/hooks/usePreferences';
 export default function Home() {
     const [historyOpen, setHistoryOpen] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
-    const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [restoredEntry, setRestoredEntry] = useState<TranslationEntry | null>(null);
     const prefs = usePreferences();
-
-    const handleTranslationComplete = useCallback(() => {
-        setRefreshTrigger((prev) => prev + 1);
-    }, []);
+    const { setSourceLang, setTargetLang } = prefs;
 
     const handleSelectHistory = useCallback((entry: TranslationEntry) => {
         setRestoredEntry(entry);
+        setSourceLang(entry.sourceLang);
+        setTargetLang(entry.targetLang);
         setHistoryOpen(false);
-    }, []);
+    }, [setSourceLang, setTargetLang]);
 
     return (
         <main className="min-h-screen flex flex-col relative overflow-hidden">
@@ -79,21 +77,18 @@ export default function Home() {
 
             {/* Main Content */}
             <div className="flex-1 p-4 md:p-6 max-w-7xl mx-auto w-full">
-                {prefs.isLoaded && (
-                    <TranslatorPanel
-                        onTranslationComplete={handleTranslationComplete}
-                        restoredEntry={restoredEntry}
-                        translationMode={prefs.mode}
-                        onModeChange={prefs.setMode}
-                        meaningModel={prefs.meaningModel}
-                        directModel={prefs.directModel}
-                        reverseModel={prefs.reverseModel}
-                        sourceLang={prefs.sourceLang}
-                        targetLang={prefs.targetLang}
-                        onSourceLangChange={prefs.setSourceLang}
-                        onTargetLangChange={prefs.setTargetLang}
+                <TranslatorPanel
+                    key={restoredEntry?.id ?? 'new'}
+                    initialEntry={restoredEntry}
+                    translationMode={prefs.mode}
+                    meaningModel={prefs.meaningModel}
+                    directModel={prefs.directModel}
+                    reverseModel={prefs.reverseModel}
+                    sourceLang={prefs.sourceLang}
+                    targetLang={prefs.targetLang}
+                    onSourceLangChange={prefs.setSourceLang}
+                    onTargetLangChange={prefs.setTargetLang}
                     />
-                )}
             </div>
 
             {/* History Sidebar */}
@@ -101,7 +96,6 @@ export default function Home() {
                 isOpen={historyOpen}
                 onClose={() => setHistoryOpen(false)}
                 onSelect={handleSelectHistory}
-                refreshTrigger={refreshTrigger}
             />
 
             <SettingsModal 

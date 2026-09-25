@@ -90,11 +90,9 @@ Target language: ${targetName} ${targetFlag}`;
 export function buildReverseLookupPrompt({ text, sourceLang, targetLang, context }: PromptParams): PromptResult {
     const target = getLanguageByCode(targetLang);
     const targetName = target ? target.name : targetLang;
-    const targetFlag = target ? target.flag : '🌐';
     
     const source = getLanguageByCode(sourceLang);
     const sourceName = source ? source.name : sourceLang;
-    const sourceFlag = source ? source.flag : '🌐';
     const isAuto = sourceLang === 'auto';
 
     const systemInstruction = `You are an expert linguist. The user is trying to remember or find a word based on a description.

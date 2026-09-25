@@ -1,84 +1,32 @@
-import { useState, useEffect } from 'react';
 import { TranslationMode } from '@/lib/types';
+import { AUTO_MODEL, isKnownModel } from '@/lib/models';
+import { useStoredValue } from '@/lib/storage';
+
+const MODES: string[] = ['meaning', 'direct', 'reverse'];
+const isMode = (v: string) => MODES.includes(v);
+// Models saved by older versions (Groq, Gemma, ...) no longer exist; they fall back to auto.
+const isModel = (v: string) => v === AUTO_MODEL || isKnownModel(v);
 
 export function usePreferences() {
-    const [mode, setMode] = useState<TranslationMode>('meaning');
-    const [meaningModel, setMeaningModel] = useState('auto');
-    const [directModel, setDirectModel] = useState('auto');
-    const [reverseModel, setReverseModel] = useState('auto');
-    const [sourceLang, setSourceLang] = useState('auto');
-    const [targetLang, setTargetLang] = useState('uz');
-    const [isLoaded, setIsLoaded] = useState(false);
-
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            const savedMode = localStorage.getItem('lumen_translation_mode') as TranslationMode;
-            if (savedMode && ['meaning', 'direct', 'reverse'].includes(savedMode)) {
-                setMode(savedMode);
-            }
-            
-            const savedMeaning = localStorage.getItem('lumen_meaning_model');
-            if (savedMeaning) setMeaningModel(savedMeaning);
-            
-            const savedDirect = localStorage.getItem('lumen_direct_model');
-            if (savedDirect) setDirectModel(savedDirect);
-
-            const savedReverse = localStorage.getItem('lumen_reverse_model');
-            if (savedReverse) setReverseModel(savedReverse);
-
-            const savedSource = localStorage.getItem('lumen_source_lang');
-            if (savedSource) setSourceLang(savedSource);
-
-            const savedTarget = localStorage.getItem('lumen_target_lang');
-            if (savedTarget) setTargetLang(savedTarget);
-
-            setIsLoaded(true);
-        }
-    }, []);
-
-    const handleSetMode = (newMode: TranslationMode) => {
-        setMode(newMode);
-        localStorage.setItem('lumen_translation_mode', newMode);
-    };
-
-    const handleSetMeaningModel = (model: string) => {
-        setMeaningModel(model);
-        localStorage.setItem('lumen_meaning_model', model);
-    };
-
-    const handleSetDirectModel = (model: string) => {
-        setDirectModel(model);
-        localStorage.setItem('lumen_direct_model', model);
-    };
-
-    const handleSetReverseModel = (model: string) => {
-        setReverseModel(model);
-        localStorage.setItem('lumen_reverse_model', model);
-    };
-
-    const handleSetSourceLang = (lang: string) => {
-        setSourceLang(lang);
-        localStorage.setItem('lumen_source_lang', lang);
-    };
-
-    const handleSetTargetLang = (lang: string) => {
-        setTargetLang(lang);
-        localStorage.setItem('lumen_target_lang', lang);
-    };
+    const [mode, setMode] = useStoredValue<TranslationMode>('lumen_translation_mode', 'meaning', isMode);
+    const [meaningModel, setMeaningModel] = useStoredValue<string>('lumen_meaning_model', AUTO_MODEL, isModel);
+    const [directModel, setDirectModel] = useStoredValue<string>('lumen_direct_model', AUTO_MODEL, isModel);
+    const [reverseModel, setReverseModel] = useStoredValue<string>('lumen_reverse_model', AUTO_MODEL, isModel);
+    const [sourceLang, setSourceLang] = useStoredValue<string>('lumen_source_lang', 'auto');
+    const [targetLang, setTargetLang] = useStoredValue<string>('lumen_target_lang', 'uz');
 
     return {
-        isLoaded,
         mode,
-        setMode: handleSetMode,
+        setMode,
         meaningModel,
-        setMeaningModel: handleSetMeaningModel,
+        setMeaningModel,
         directModel,
-        setDirectModel: handleSetDirectModel,
+        setDirectModel,
         reverseModel,
-        setReverseModel: handleSetReverseModel,
+        setReverseModel,
         sourceLang,
-        setSourceLang: handleSetSourceLang,
+        setSourceLang,
         targetLang,
-        setTargetLang: handleSetTargetLang,
+        setTargetLang,
     };
 }

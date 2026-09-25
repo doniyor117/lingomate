@@ -10,12 +10,6 @@ export interface TranslateRequest {
     model?: string;
 }
 
-export interface TranslateResponse {
-    translation: string;
-    model: string;
-    mode: OutputMode;
-}
-
 export interface TranslationEntry {
     id: string;
     timestamp: number;
