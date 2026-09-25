@@ -27,6 +27,7 @@ export function parseTranslateOutput(raw: string, expectTag: boolean): Translati
 const REGISTERS: Register[] = ['standard', 'formal', 'informal', 'slang', 'internet', 'vulgar'];
 
 const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
+const sameText = (a: string, b: string) => a.toLowerCase().replace(/\s+/g, ' ') === b.toLowerCase().replace(/\s+/g, ' ');
 const register = (v: unknown): Register => (REGISTERS.includes(v as Register) ? (v as Register) : 'standard');
 
 function parseJson(raw: string): Record<string, unknown> {
@@ -45,15 +46,23 @@ function toDictionary(json: Record<string, unknown>): DictionaryResult {
         pronunciation: str(json.pronunciation),
         note: str(json.note),
         senses: senses
-            .map((s) => ({
-                emoji: str(s?.emoji),
-                translation: str(s?.translation),
-                partOfSpeech: str(s?.partOfSpeech),
-                register: register(s?.register),
-                explanation: str(s?.explanation),
-                example: str(s?.example),
-                exampleTranslation: str(s?.exampleTranslation),
-            }))
+            .map((s) => {
+                const translation = str(s?.translation);
+                const explanation = str(s?.explanation);
+                const example = str(s?.example);
+                const exampleTranslation = str(s?.exampleTranslation);
+                return {
+                    emoji: str(s?.emoji),
+                    // A sense with only an explanation is still worth showing.
+                    translation: translation || explanation,
+                    partOfSpeech: str(s?.partOfSpeech),
+                    register: register(s?.register),
+                    explanation: translation ? explanation : '',
+                    example,
+                    // Same-language lookups can echo the example back; don't show it twice.
+                    exampleTranslation: sameText(exampleTranslation, example) ? '' : exampleTranslation,
+                };
+            })
             .filter((s) => s.translation),
     };
 }

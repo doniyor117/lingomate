@@ -124,8 +124,9 @@ body {
 }
 
 /* Smooth focus transitions */
+/* The main textarea is excluded: its whole card shows focus instead (focus-within),
+   since a square glow around a borderless textarea looks broken. */
 input:focus,
-textarea:focus,
 select:focus {
   outline: none;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);

@@ -39,12 +39,13 @@ function dictionaryPrompt({ text, sourceLang, targetLang, context }: TranslateRe
 ${sourceRule(sourceLang, 'input')}- headword: the input with any typo corrected (unchanged if already correct). Add the article or gender for nouns in languages that have them (der/die/das, el/la, le/la).
 - pronunciation: IPA for the headword, in slashes.
 - senses: the distinct meanings, most common first (usually 1-5). If the input is an idiom or phrase, explain the phrase as a whole. For each sense:
-  - translation: the ${target} equivalent
+  - translation: the ${target} equivalent (a word or short phrase, never empty)
   - partOfSpeech: short, written in ${target}
   - explanation: one short sentence in ${target} about when or how it's used
   - example: a short natural sentence in the input's language using the headword in this sense
   - exampleTranslation: that example in ${target}
   - emoji: one emoji that pictures this sense
+- If the input is already in ${target}, work as a ${target} dictionary: "translation" is a close synonym or a definition of a few words (never empty and never just the headword), and "exampleTranslation" is "".
 ${REGISTER_RULES}
 - note: one short, genuinely useful tip in ${target} (grammar, false friends, cultural nuance, slang usage), or "" if there is nothing worth adding.
 ${contextRule(context)}`;

@@ -1,6 +1,7 @@
 import { getModelOrder } from './models';
 import { buildPrompt, PromptResult } from './prompts';
 import { OutputMode, TranslateRequest } from './types';
+import { parseOutput } from './results';
 
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 
@@ -135,7 +136,18 @@ export async function translateStream(request: TranslateRequest, apiKey: string)
 
     for (const model of getModelOrder(request.model)) {
         try {
-            return { ...(await openModelStream(model, prompt, apiKey)), mode };
+            const opened = await openModelStream(model, prompt, apiKey);
+            if (!prompt.schema) return { ...opened, mode };
+
+            // Structured answers are only useful whole, so check them here: an unusable
+            // one counts as a model failure and falls back instead of reaching the client.
+            const text = await new Response(opened.stream).text();
+            try {
+                parseOutput(mode, text, false);
+            } catch (parseError) {
+                throw new Error(`${model} returned an unusable ${mode} response (${parseError instanceof Error ? parseError.message : parseError}): ${text.slice(0, 500)}`);
+            }
+            return { model, mode, stream: new Response(text).body! };
         } catch (error) {
             console.warn(`Gemini model ${model} failed, trying next fallback:`, error);
             lastError = error instanceof Error ? error : new Error(String(error));

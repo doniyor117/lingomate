@@ -57,7 +57,7 @@ export function SourcePanel({
 
     return (
         // z-10 keeps the mode menu above the result panel when it overlaps it on mobile.
-        <div className="relative z-10 flex flex-col rounded-xl border border-[var(--border)] glass min-h-[200px] lg:min-h-0 bg-[var(--surface)]">
+        <div className="relative z-10 flex flex-col rounded-xl border border-[var(--border)] focus-within:!border-blue-500/50 transition-colors glass min-h-[200px] lg:min-h-0 bg-[var(--surface)]">
             <div className="flex-1 relative">
                 <textarea
                     ref={textareaRef}
@@ -65,7 +65,7 @@ export function SourcePanel({
                     onChange={(e) => setSourceText(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder={getModeInfo(mode).placeholder}
-                    className="w-full h-full min-h-[140px] p-4 bg-transparent resize-none focus:outline-none text-lg text-[var(--foreground)] placeholder:text-[var(--text-muted)]"
+                    className="w-full h-full min-h-[140px] p-4 bg-transparent resize-none outline-none text-lg text-[var(--foreground)] placeholder:text-[var(--text-muted)]"
                     autoFocus
                 />
                 {isOverLimit && (
